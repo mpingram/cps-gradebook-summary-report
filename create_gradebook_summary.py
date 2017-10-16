@@ -68,8 +68,9 @@ def create_lettergrade_breakdown_diagram(**kwargs):
 
     return create_pie_chart_image(letter_grades, output_url)
 
-def get_grade_df(filepath):
-    df = pd.read_csv(filepath)
+def get_grade_df():
+    GRADE_DATA_FILEPATH = "./source/ESCumulativeGradesExtract.csv"
+    df = pd.read_csv(GRADE_DATA_FILEPATH)
     # fill NaN's with empty string
     df.fillna("", inplace=True)
 
@@ -84,7 +85,8 @@ def get_grade_df(filepath):
     return df
 
 def get_assignments_df(filepath):
-    df = pd.read_csv(filepath)
+    ASSIGNMENT_DATA_FILEPATH = "./source/CPSAllAssignmentsandGradesExtract(SlowLoad).csv"
+    df = pd.read_csv(ASSIGNMENT_DATA_FILEPATH)
     # fill NaN's with empty string
     df.fillna("", inplace=True)
 
@@ -93,8 +95,9 @@ def get_assignments_df(filepath):
        "{} {}".format(row.loc["TeacherFirst"], row.loc["TeacherLast"]), axis=1)
     return df
 
-def get_categories_df(filepath):
-    df = pd.read_csv(filepath)
+def get_categories_df():
+    CATEGORY_DATA_FILEPATH = "./source/CPSTeacherCategoriesandTotalPointsLogic.csv"
+    df = pd.read_csv(CATEGORY_DATA_FILEPATH)
     # fill NaN's with empty string
     df.fillna("", inplace=True)
 
@@ -103,18 +106,30 @@ def get_categories_df(filepath):
             "{} {}".format(row.loc["TeacherFirstName"], row.loc["TeacherLastName"]), axis=1)
     return df
 
+def get_unused_cats_df():
+    UNUSED_CATS_FILEPATH = "./source/CPSUnusedCategoriesinTeacherGradebooks.csv"
+    source_df = pd.read_csv(UNUSED_CATS_FILEPATH)
+    # keep only the columns we care about
+    df = pd.DataFrame()
+    # rename "Column Name" -> "ColumnName" for consistency w/ other data sources
+    df["ClassName"] = source_df["Class Name"]
+    df["CategoryName"] = source_df["Unused Category"]
+    df["CategoryWeight"] = source_df["Category Weight"]
+    df["TotalClassAssignments"] = source_df["Total Class Assignments"]
+    # add column with teacher full name
+    df["TeacherFullname"] = source_df.apply(lambda row:
+            "{} {}".format(row.loc["Teacher First"], row.loc["Teacher Last"]), axis=1)
+    return df
+
 def create_gradebook_summary(teacher_fullname):
 
-    GRADE_DATA_FILEPATH = "./source/ESCumulativeGradesExtract.csv"
-    ASSIGNMENT_DATA_FILEPATH = "./source/CPSAllAssignmentsandGradesExtract(SlowLoad).csv"
-    CATEGORY_DATA_FILEPATH = "./source/CPSTeacherCategoriesandTotalPointsLogic.csv"
-
     IMAGE_DIR = "./images/"
+    template_vars = {}
 
     # I. get grade breakdown pie charts
     # --
     # get grade data df
-    grade_df = get_grade_df(GRADE_DATA_FILEPATH)
+    grade_df = get_grade_df()
     # filter grade_df by teacher
     grade_df = grade_df[grade_df["TeacherFullname"] == teacher_fullname]
     # group filtered df by class (Subject + Homeroom) 
@@ -130,41 +145,33 @@ def create_gradebook_summary(teacher_fullname):
             diagram_urls.append(diagram_url)
         else:
             print(err)
-    
+
+    template_vars["diagram_urls"] = diagram_urls 
+
     # II. get # of failing students, grouped by subject and homeroom
     # --
+    # get grade data df
+    grade_df = get_grade_df()
+    # filter grade_df by teacher
+    grade_df = grade_df[grade_df["TeacherFullname"] == teacher_fullname]
+    # filter grade_df again by students with scores of F
+    grade_df = grade_df[grade_df.apply(lambda row: to_letter_grade(row["QuarterAvg"], 100) == "F", axis=1)]
+    # group filtered df by class (Subject + Homeroom) 
+    grade_gdf_by_class = grade_df.groupby("ClassName")
+    failing_students = grade_gdf_by_class
+    template_vars["failing_students"] = failing_students
 
-    # III. Get list of unused categories by subject.
+    # III. Get list of unused categories by class.
+    # --
     # get assignments and categories in dataframes
-    assignments_df = get_assignments_df(ASSIGNMENT_DATA_FILEPATH)
-    categories_df = get_categories_df(CATEGORY_DATA_FILEPATH)
-    # filter assignments and categories by teacher
-    assignments_df = assignments_df[assignments_df["TeacherFullname"] == teacher_fullname]
-    categories_df = categories_df[categories_df["TeacherFullname"] == teacher_fullname]
-    # group assignments and categories by ClassName
-    assignments_gdf_by_class = assignments_df.groupby("ClassName")
-    categories_gdf_by_class = categories_df.groupby("ClassName")
-    # Filter categories_gdf_by_class so that it only
-    # contains categories that are not found in corresponding
-    # assignments_gdf group.
-    def select_unused_categories(group):
-        class_name = group.name
-        assignment_group = assignments_gdf_by_class.get_group(class_name)
-        all_categories = group["CategoryName"].unique()
-        used_categories = assignment_group["CategoryName"].unique()
-        unused_categories = [cat for cat in all_categories if cat not in used_categories]
-        print(class_name)
-        print(unused_categories)
-        # filter group; select only categories that are not used
-        group = group[group["CategoryName"].isin(unused_categories)]
-        if len(group) == 0:
-            # if there are no unused categories, return none
-            return None
-        else:
-            # otherwise return the filtered group
-            return group 
-    missing_categories = categories_gdf_by_class.apply(select_unused_categories)
-    print(missing_categories)
+    unused_cats_df = get_unused_cats_df()
+    # filter unused categories by teacher
+    unused_cats_df = unused_cats_df[unused_cats_df["TeacherFullname"] == teacher_fullname]
+    # group unused cats by class
+    unused_cats_df_by_class = unused_cats_df.groupby("ClassName")
+    template_vars["unused_categories"] = unused_cats_df_by_class
+
+    # IV.
 
 #    failing_students_by_subject = df.groupby(Cols.SubjectName.value, 
 #                                             Cols.Homeroom.value).filter(lambda row:
@@ -207,5 +214,5 @@ def create_gradebook_summary(teacher_fullname):
 
 if __name__ == "__main__":
     # DEBUG  
-    DEBUG_NAME = "Christopher Brekke"
+    DEBUG_NAME = "Karen Baggot"
     create_gradebook_summary(DEBUG_NAME)

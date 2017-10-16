@@ -14,6 +14,8 @@
       --> "./source/CPSAllAssignmentsandGradesExtract(SlowLoad).csv"
   ** Gradebook -> Custom Reports -> CPS Teacher Categories and Total Points Logic
       --> "./source/CPSTeacherCategoriesandTotalPointsLogic.csv"
+  ** Gradebook -> Custom Reports -> CPS Unused Categories in Teacher Gradebooks
+      --> "./source/CPSUnusedCategoriesinTeacherGradebooks.csv"
   ** Gradebook -> reports -> ES Cumulative Grades Extract
       --> "./source/ESCumulativeGradesExtract.csv"
 
