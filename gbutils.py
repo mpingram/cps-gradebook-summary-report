@@ -1,31 +1,14 @@
 from os import path
 from hashlib import md5
 import pandas as pd
+import numpy as np
 from jinja2 import Environment, FileSystemLoader
+import matplotlib.pyplot as plt
 # from weasyprint import HTML
 
-from utils import to_letter_grade, to_percentage_grade
+from gradeconvert import to_letter_grade, to_percentage_grade
 from enums import LetterGradeCutoffs, GradeCodes, Cols
 
-def get_grade_df(filepath):
-
-    def get_subject_name(class_name):
-        return class_name[:class_name.rfind("(")].strip()
-    def get_homeroom(class_name):
-        return class_name[class_name.rfind("(") + 1: class_name.rfind(")")]
-
-    grade_df = pd.read_csv(filepath)
-
-    # add column with teacher full name
-    grade_df[Cols.TeacherFullname.value] = grade_df.apply(lambda row:
-       "{} {}".format(row.loc[Cols.TeacherFirstname.value], row.loc[Cols.TeacherLastname.value]), axis=1)
-    # add column with subject name for each class
-    grade_df[Cols.SubjectName.value] = grade_df.apply(lambda row:
-        get_subject_name(row[Cols.ClassName.value]), axis=1)
-    grade_df[Cols.Homeroom.value] = grade_df.apply(lambda row:
-        get_homeroom(row[Cols.ClassName.value]), axis=1)
-
-    return grade_df
 
 def get_lettergrade_breakdown(grade_df_subset):
     def count_of_grades(letter_grade):
@@ -44,48 +27,92 @@ def get_lettergrade_breakdown(grade_df_subset):
         count_of_grades("F"),
     ), index=("A", "B", "C", "D", "F"))
 
-def get_lettergrade_breakdown_diagram_urls(grade_df_subset, folder_path):
-    gdf = grade_df_subset.groupby(Cols.ClassName.value)
-    diagram_urls = []
-    for classname, group in gdf:
-        subj_grade_breakdown = get_lettergrade_breakdown(group)
-        pie_chart = subj_grade_breakdown.plot.pie()
-        classname = classname
-        diagram_url = path.join(folder_path, "{}.png".format(classname))
-        try: 
-            pie_chart.get_figure().savefig(diagram_url)
-            diagram_urls.append(diagram_url)
-        except IOError as ioErr:
-            print("Cannot save figure at {}".format(diagram_url))
-            raise ioErr
-    return diagram_urls
-
 def calculate_negative_impact(score, possible_score, category_weight):
-    percent_score = to_percentage_score(score, possible_score)
+    if score < 0:
+        raise ValueError("Score {} is negative!".format(score))
+    elif score > possible_score:
+        raise ValueError("Score {} greater than possible_score {}".format(score, possible_score))
+    elif category_weight < 0 or category_weight > 100:
+        raise ValueError("Category weight greater than 100 percent!")
+
+    percent_score = to_percentage_grade(score, possible_score)
     impact = (100 - percent_score) * category_weight
     return impact
+
+def count_zeroes(df):
+    s = df[Cols.Score.value]
+    s = s[ (s == "0") | (s == 0) ]
+    return len(s)
+
+def count_blanks(df):
+    s = df[Cols.Score.value]
+    s = s[ (s == None) | (s == "") ]
+    return len(s)
+
+def count_grade_code(df, grade_code):
+    s = df[Cols.Score.value]
+    s = s[ (s == grade_code.value) ]
+    return len(s) 
+
 
 def aggregate_assignments(grade_df_subset):
     # get average percentage grade for each assignment
     gdf = grade_df_subset.groupby([Cols.AssignmentName.value, 
-                                   Cols.SubjectName.value, 
-                                   Cols.GradeLevel.value])
+                                   Cols.ClassName.value])
     def average_assignments(group):
         assignment_grades = [to_percentage_grade(row[Cols.Score.value], row[Cols.ScorePossible.value])
-                                for row in group]
-        return np.mean(assignment_grades)
+                                for _,row in group.iterrows()]
+        # remove None values
+        assignment_grades = [a for a in assignment_grades if a is not None]
+        if len(assignment_grades) > 0:
+            avg = np.mean(assignment_grades)
+            if np.isnan(avg):
+                print(assignment_grades)
+            return avg
+        # if all assignments were None, return None.
+        else:
+            return None
 
-    return gdf.apply(lambda group: pd.DataFrame({
-            Cols.Score.value: average_assignments(group),
-            Cols.ScorePossible.value: float(100),
-            Cols.SubjectName.value: group[Cols.SubjectName.value],
-            Cols.AssignmentName.value: group[Cols.AssignmentName.value],
-            Cols.CategoryName.value: group[Cols.CategoryName.value],
-            "NumAssignments": group.size,
-            "NumMissingOrZero": group[group[Cols.Score.value] == GradeCodes.Missing
-                                        or group[Cols.Score.value] == "0" 
-                                        or group[Cols.Score.value] == 0].size
-        }))
+
+    def create_assignment_row(group):
+
+        # This is either a float percentage score or None.
+        # If None, it means that every student's score
+        # was marked for 'ignoring' -- ie, either with
+        # GradeCodes.Excused or empty ("")
+        group_average_percentage_or_none = average_assignments(group)
+
+        assignment_row = {
+                Cols.Score.value: group_average_percentage_or_none,
+                Cols.ScorePossible.value: float(100),
+                "NumAssignments": len(group),
+                "NumMissing": count_grade_code(group, GradeCodes.Incomplete),
+                "NumIncomplete": count_grade_code(group, GradeCodes.Incomplete),
+                "NumExcused": count_grade_code(group ,GradeCodes.Excused),
+                "NumZero": count_zeroes(group),
+                "NumBlank": count_blanks(group)
+            }
+
+        # add the rest of the columns to assignment_row by taking
+        # the first element from group. We expect all of these
+        # values to best case be the same, worst case to not matter
+        # if slightly different.
+        for col in Cols:
+            if col.value not in (Cols.Score.value,
+                    Cols.ScorePossible.value,
+                    Cols.StudentId.value,
+                    Cols.StudentLastname.value,
+                    Cols.StudentFirstname.value):
+                assignment_row[col.value] = group.iloc[0][col.value]
+
+        return assignment_row
+
+    aggregated_df = pd.DataFrame()
+    for name, group in gdf:
+        row = create_assignment_row(group)
+        aggregated_df = aggregated_df.append(row, ignore_index=True)
+        
+    return aggregated_df
 
 
 def filter_by_teacher(grade_df_subset, teacher_fullname):

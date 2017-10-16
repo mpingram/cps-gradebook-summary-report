@@ -10,7 +10,7 @@ class LetterGradeCutoffs(Enum):
 
 class GradeCodes(Enum):
     Missing="Msg"
-    Excepted="Exc"
+    Excused="Exc"
     Incomplete="Inc"
 
 class Cols(Enum):
@@ -33,5 +33,3 @@ class Cols(Enum):
     SchoolId="StuSchoolId"
     # added
     TeacherFullname="TeacherFull"
-    SubjectName="SubjectName"
-    Homeroom="Homeroom"

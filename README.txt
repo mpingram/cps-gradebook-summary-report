@@ -10,14 +10,12 @@
 
 
 * Source files:
-  **Gradebook -> Custom Reports -> CPS All Assignments and Grades Extract
-      --> "./grade-data.csv"
- # Gradebook -> reports -> ES Cumulative Grades Extract
- #     --> "./grades.csv"
- # Gradebook -> reports -> Blank Grades -> Blank, Inc, or Exc
- #     --> "./blank-incomplete-and-excepted-grades.csv"
- # Gradebook -> reports -> Blank Grades -> Missing or 0
- #     --> "./missing-and-zero-grades.csv"
+  ** Gradebook -> Custom Reports -> CPS All Assignments and Grades Extract
+      --> "./source/CPSAllAssignmentsandGradesExtract(SlowLoad).csv"
+  ** Gradebook -> Custom Reports -> CPS Teacher Categories and Total Points Logic
+      --> "./source/CPSTeacherCategoriesandTotalPointsLogic.csv"
+  ** Gradebook -> reports -> ES Cumulative Grades Extract
+      --> "./source/ESCumulativeGradesExtract.csv"
 
 * Output:
   ** One PDF report for each teacher in subfolder "./reports". Report contains:
@@ -32,6 +30,7 @@
     if category weights do not add up to 100%, which is possible 
     *** for each suject, # of excused grades by category
     *** for each subject, # of missing, 0, or incomplete grades by category
+    *** [Considering / WIP] list of assignments for which student scores are higher than max scores.
 
 * Language:
   ** python=3.6

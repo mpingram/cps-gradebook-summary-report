@@ -1,6 +1,8 @@
 *.swp
-*/**/.swp
+./**/*.swp
 *.ipynb
-*/**/.ipynb
+./**/*.ipynb
 source/
 images/
+*.pyc
+./**/*.pyc
