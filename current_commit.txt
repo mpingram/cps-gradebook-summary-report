@@ -1,0 +1,12 @@
+Create Missing Categories df for report
+
+-- import AllCategories to df
+-- import AllAssignments to df
+-- filter AllCategories and AllAssignments by teacher
+-- group AllCategories and AllAssignments by ClassName
+-- get unique CategoryNames in AllAssignments and
+  AllCategories
+-- filter AllCategories that are in AllCategories and
+  are NOT in AllAssignments
+-- remove unnecessary columns and store filtered
+  AllCategories grouped by ClassName as MissingCategories
