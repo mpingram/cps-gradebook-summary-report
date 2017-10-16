@@ -1,27 +1,9 @@
-Get failing students, rewrite get unused categories
+Get assignments by negative impact
 
-* create_gradebook_summary - get unused categories
-** write getUnusedCats helper function
-** import CPSTeacherUnusedCategories -> df
-** filter UnusedCats by teacher fullname
-** remove unncessary columns from UnusedCats
-** group UnusedCats by subject
-** remove empty groups from UnusedCats
-** store UnusedCatsBySubject if not empty.
-
-*** NOTE - Will reconsider inferring missing categories later -
-  right now, need to prioritize safety. There's some odd things
-  about AllCategories, like including categories from last year(?)
-  which make it more complex to be sure I'm right about which categories
-  are actually unused. Nicki was right -- it's really the spread-out
-  nature of all of this data which makes this work difficult. I need
-  to think how I can use her work to simplify this. I need also to take
-  a step back and relax once this report is done, I feel all wrung out.
-
-* create_gradebook_summary - get failing students
-** import grade data
-** filter grade data by teacher
-** filter grade data by students with Quarter Averages
-  below F cutoff
-** group grade data by Class
-
+* get_gradebook_summary.py
+** import assignment data
+** filter assignment df by teacher
+** add negative impact score column to assignment df
+** sort assignment df on negative impact
+** group sorted assignment df by Class
+** combine by taking top(5) of grouped df

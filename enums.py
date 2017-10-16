@@ -32,4 +32,4 @@ class Cols(Enum):
     GradeEnteredOn="GradeEnteredOn"
     SchoolId="StuSchoolId"
     # added
-    TeacherFullname="TeacherFull"
+    TeacherFullname="TeacherFullname"

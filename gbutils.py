@@ -27,8 +27,10 @@ def get_lettergrade_breakdown(grade_df_subset):
         count_of_grades("F"),
     ), index=("A", "B", "C", "D", "F"))
 
-def calculate_negative_impact(score, possible_score, category_weight):
-    if score < 0:
+def calculate_negative_impact(score, possible_score, category_weight, num_assignments):
+    if score is None:
+        return None
+    elif score < 0:
         raise ValueError("Score {} is negative!".format(score))
     elif score > possible_score:
         raise ValueError("Score {} greater than possible_score {}".format(score, possible_score))
@@ -36,7 +38,7 @@ def calculate_negative_impact(score, possible_score, category_weight):
         raise ValueError("Category weight greater than 100 percent!")
 
     percent_score = to_percentage_grade(score, possible_score)
-    impact = (100 - percent_score) * category_weight
+    impact = (100 - percent_score) * (category_weight / 100) / float(num_assignments)
     return impact
 
 def count_zeroes(df):
@@ -53,7 +55,6 @@ def count_grade_code(df, grade_code):
     s = df[Cols.Score.value]
     s = s[ (s == grade_code.value) ]
     return len(s) 
-
 
 def aggregate_assignments(grade_df_subset):
     # get average percentage grade for each assignment

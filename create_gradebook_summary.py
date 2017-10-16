@@ -1,4 +1,4 @@
-from enums import LetterGradeCutoffs
+from enums import LetterGradeCutoffs, Cols, GradeCodes
 import gbutils
 from gradeconvert import to_percentage_grade, to_letter_grade
 import pandas as pd
@@ -84,7 +84,7 @@ def get_grade_df():
 
     return df
 
-def get_assignments_df(filepath):
+def get_assignments_df():
     ASSIGNMENT_DATA_FILEPATH = "./source/CPSAllAssignmentsandGradesExtract(SlowLoad).csv"
     df = pd.read_csv(ASSIGNMENT_DATA_FILEPATH)
     # fill NaN's with empty string
@@ -93,7 +93,10 @@ def get_assignments_df(filepath):
     # add column with teacher full name
     df["TeacherFullname"] = df.apply(lambda row:
        "{} {}".format(row.loc["TeacherFirst"], row.loc["TeacherLast"]), axis=1)
-    return df
+    
+    # aggregate data on assignment level, folding individual student
+    # assignments into averaged student assignments
+    return gbutils.aggregate_assignments(df)
 
 def get_categories_df():
     CATEGORY_DATA_FILEPATH = "./source/CPSTeacherCategoriesandTotalPointsLogic.csv"
@@ -171,26 +174,31 @@ def create_gradebook_summary(teacher_fullname):
     unused_cats_df_by_class = unused_cats_df.groupby("ClassName")
     template_vars["unused_categories"] = unused_cats_df_by_class
 
-    # IV.
+    # IV. get top 5 assignments with highest negative impact, grouped by subject
+    # -- 
+    NUM_ASSIGNMENTS_TO_DISPLAY_PER_CLASS = 5
+    assignments_df = get_assignments_df()
+    # sort assignments by teacher
+    assignments_df = assignments_df[assignments_df["TeacherFullname"] == teacher_fullname]
+    # drop all assignments with None, Excused, Incomplete or "" grades.
+    assignments_df = assignments_df[~assignments_df["Score"].isin(("", None, GradeCodes.Excused, GradeCodes.Incomplete))]
+    # group assignments by class name
+    assignments_gdf_by_class = assignments_df.groupby(Cols.ClassName.value)
+    # go through groups and calculate negative impact scores, adding new column for them
+    def add_negative_impact_score_column_and_sort(df):
+        num_assignments = len(df)
+        df["Negative Impact"] = df.apply(lambda row: gbutils.calculate_negative_impact(
+                                                    row[Cols.Score.value], 
+                                                    row[Cols.ScorePossible.value], 
+                                                    row[Cols.CategoryWeight.value],
+                                                    num_assignments), axis=1)
+        df = df.sort_values("Negative Impact", ascending=False)
+        return df
+    negative_impact_assignments = assignments_gdf_by_class.apply(add_negative_impact_score_column_and_sort)
+    # keep only the N highest-impact assignments
+    negative_impact_assignments = negative_impact_assignments.apply(lambda group: group.head(NUM_ASSIGNMENTS_TO_DISPLAY_PER_CLASS))
+    print(negative_impact_assignments)
 
-#    failing_students_by_subject = df.groupby(Cols.SubjectName.value, 
-#                                             Cols.Homeroom.value).filter(lambda row:
-#            to_percentage_grade(row[Cols.Score.value], row[Cols.ScorePossible.value]) <= LetterGradeCutoffs.F)
-#
-#    # III. get list of unused categories, grouped by subject
-#        # FIXME: I think we need addl data source for this 
-#
-#    # IV. get top 5 assignments with highest negative impact,
-#    #       grouped by subject
-#    assignments_df = aggregate_by_assignments(df)
-#    assignments_df["Negative Impact"] = assignments_df.apply(lambda row: 
-#                                                    gbutils.calculate_negative_impact(
-#                                                        row[Cols.Score.value], 
-#                                                        row[Cols.ScorePossible.value], 
-#                                                        row[Cols.CategoryWeight.value]), axis=1)
-#    sorted_assignments_df = assignments_df.sort_values("Negative Impact")
-#    negative_impact_assignments = sorted_assignments_df.groupby(Cols.SubjectName.value).top(5)
-#
 #    # V. get category table, by subject, showing name, weight, # assignments,
 #    #       and avg score
 #    assignments_df_filtered = assignments_df[[
