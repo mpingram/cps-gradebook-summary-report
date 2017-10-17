@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>{{teacher_fullname}} gradebook report</title>
+  <link rel="stylesheet" href="templates/typography.css">
+</head>
+<body style="width:100%;height:100%">
+  <div>
+    <h5>I. Grade distribution</h5>
+    <div style="width:100%;">
+      {% for url in diagram_urls %}
+      <div style="width: 150px; float: left;">
+        <img  src="{{url}}" style="max-width: 100%" alt="diagram"/>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <br>
+  <div>
+    <h5>II. Failing students </h5>
+    {{ failing_students }}
+  </div>
+
+  <br>
+  <div>
+    <h5>III. Unused categories </h5>
+    {{ unused_categories }}
+  </div>
+
+  <br>
+  <div>
+    <h5>IV. Negative impact assignments </h5>
+    {{ negative_impact_assignments }}
+  </div>
+
+  <br>
+  <div>
+    <h5>V. Category table </h5>
+    {{ category_table  }}
+  </div>
+
+  <br>
+  <div>
+    <h5>VI. Number of Missing and Zero assignments </h5>
+    {{ missing_zero_assignments  }}
+  </div>
+
+</body>
+</html>

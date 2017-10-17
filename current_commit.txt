@@ -1,6 +1,12 @@
-Get Missing/Zero assignments table
+Test and refactor get_gradebook_summary
 
--- import assignments df
--- filter by teacher
--- group by className
--- aggregate by NumMissing + NumZero
+* get_gradebook_summary.py
+** split each data-getting method up into pure,
+    testable functions
+** reuse as much data-loading code as possible for
+    performance increase
+** minor touch -- color-code letter grades in pie chart
+
+* new file get_gradebook_summary_test.py
+** test each data-getting method for correctness
+    with expectations based off available data

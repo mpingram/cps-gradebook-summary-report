@@ -5,6 +5,9 @@ import pandas as pd
 import os.path as path
 import matplotlib.pyplot as plt
 
+import jinja2
+import weasyprint
+
 def create_lettergrade_breakdown_diagram(**kwargs):
     """Returns URL of a diagram of letter grade distribution for given grade data.
     
@@ -129,110 +132,139 @@ def create_gradebook_summary(teacher_fullname):
     IMAGE_DIR = "./images/"
     template_vars = {}
 
-#    # I. get grade breakdown pie charts
-#    # --
-#    # get grade data df
-#    grade_df = get_grade_df()
-#    # filter grade_df by teacher
-#    grade_df = grade_df[grade_df["TeacherFullname"] == teacher_fullname]
-#    # group filtered df by class (Subject + Homeroom) 
-#    grade_gdf_by_class = grade_df.groupby("ClassName")
-#    # create images
-#    diagram_urls = []
-#    for class_name, group in grade_gdf_by_class:
-#        diagram_url = path.join(IMAGE_DIR, "{}-{}.png".format(class_name, teacher_fullname))
-#        success, err = create_lettergrade_breakdown_diagram(grades=group["QuarterAvg"],
-#                                                         output_url=diagram_url,
-#                                                         label=class_name)
-#        if success:
-#            diagram_urls.append(diagram_url)
-#        else:
-#            print(err)
-#
-#    template_vars["diagram_urls"] = diagram_urls 
-#
-#    # II. get # of failing students, grouped by subject and homeroom
-#    # --
-#    # get grade data df
-#    grade_df = get_grade_df()
-#    # filter grade_df by teacher
-#    grade_df = grade_df[grade_df["TeacherFullname"] == teacher_fullname]
-#    # filter grade_df again by students with scores of F
-#    grade_df = grade_df[grade_df.apply(lambda row: to_letter_grade(row["QuarterAvg"], 100) == "F", axis=1)]
-#    # group filtered df by class (Subject + Homeroom) 
-#    grade_gdf_by_class = grade_df.groupby("ClassName")
-#    failing_students = grade_gdf_by_class
-#    template_vars["failing_students"] = failing_students
-#
-#    # III. Get list of unused categories by class.
-#    # --
-#    # get assignments and categories in dataframes
-#    unused_cats_df = get_unused_cats_df()
-#    # filter unused categories by teacher
-#    unused_cats_df = unused_cats_df[unused_cats_df["TeacherFullname"] == teacher_fullname]
-#    # group unused cats by class
-#    unused_cats_df_by_class = unused_cats_df.groupby("ClassName")
-#    template_vars["unused_categories"] = unused_cats_df_by_class
-#
-#    # IV. get top 5 assignments with highest negative impact, grouped by subject
-#    # -- 
-#    NUM_ASSIGNMENTS_TO_DISPLAY_PER_CLASS = 5
-#    # import assignments df
-#    assignments_df = get_assignments_df()
-#    # filter assignments by teacher
-#    assignments_df = assignments_df[assignments_df["TeacherFullname"] == teacher_fullname]
-#    # drop all assignments with None, Excused, Incomplete or "" grades.
-#    assignments_df = assignments_df[~assignments_df["Score"].isin(("", None, GradeCodes.Excused, GradeCodes.Incomplete))]
-#    # group assignments by class name
-#    assignments_gdf_by_class = assignments_df.groupby(Cols.ClassName.value)
-#    # go through groups and calculate negative impact scores, adding new column for them
-#    def add_negative_impact_score_column_and_sort(df):
-#        num_assignments = len(df)
-#        df["Negative Impact"] = df.apply(lambda row: gbutils.calculate_negative_impact(
-#                                                    row[Cols.Score.value], 
-#                                                    row[Cols.ScorePossible.value], 
-#                                                    row[Cols.CategoryWeight.value],
-#                                                    num_assignments), axis=1)
-#        df = df.sort_values("Negative Impact", ascending=False)
-#        return df
-#    negative_impact_assignments = assignments_gdf_by_class.apply(add_negative_impact_score_column_and_sort)
-#    # keep only the N highest-impact assignments
-#    negative_impact_assignments = negative_impact_assignments.apply(lambda group: group.head(NUM_ASSIGNMENTS_TO_DISPLAY_PER_CLASS))
-#
-#    # V. get category table, by subject, showing name, weight, # assignments, and avg score
-#    # --
-#    # import assignments df
-#    assignments_df = get_assignments_df()
-#    # filter assignments by teacher
-#    assignments_df = assignments_df[assignments_df["TeacherFullname"] == teacher_fullname]
-#    # keep only the columns we want
-#    assignments_df = assignments_df[[
-#        Cols.Score.value,
-#        Cols.ScorePossible.value,
-#        Cols.ClassName.value,
-#        Cols.CategoryName.value, 
-#        Cols.CategoryWeight.value, 
-#        "NumAssignments",
-#    ]]
-#    # group by ClassName
-#    assignments_gdf_by_class = assignments_df.groupby(Cols.ClassName.value)
-#    # in each ClassName group, subgroup by CategoryName and aggregate values in subgroup
-#    def aggregate_by_categoryname(df):
-#        return pd.DataFrame([{
-#                "AvgGrade": df[Cols.Score.value].mean(),
-#                "NumAssigns": len(df),
-#                Cols.CategoryWeight.value: df.iloc[0][Cols.CategoryWeight.value], 
-#            }])
-#    assignments_gdf_by_class = assignments_gdf_by_class.apply(lambda group: 
-#            group.groupby(Cols.CategoryName.value).apply(aggregate_by_categoryname))
-#
-#
-#
+
+    # I. get grade breakdown pie charts
+    # --
+    # get grade data df
+    grade_df = get_grade_df()
+    # filter grade_df by teacher
+    grade_df = grade_df[grade_df["TeacherFullname"] == teacher_fullname]
+    # group filtered df by class (Subject + Homeroom) 
+    grade_gdf_by_class = grade_df.groupby("ClassName")
+    # create images
+    diagram_urls = []
+    for class_name, group in grade_gdf_by_class:
+        diagram_url = path.join(IMAGE_DIR, "{}-{}.png".format(class_name, teacher_fullname))
+        success, err = create_lettergrade_breakdown_diagram(grades=group["QuarterAvg"],
+                                                         output_url=diagram_url,
+                                                         label=class_name)
+        if success:
+            diagram_urls.append(diagram_url)
+        else:
+            print(err)
+
+    template_vars["diagram_urls"] = diagram_urls 
+
+    # II. get # of failing students, grouped by subject and homeroom
+    # --
+    # get grade data df
+    grade_df = get_grade_df()
+    # filter grade_df by teacher
+    grade_df = grade_df[grade_df["TeacherFullname"] == teacher_fullname]
+    # filter grade_df again by students with scores of F
+    grade_df = grade_df[grade_df.apply(lambda row: to_letter_grade(row["QuarterAvg"], 100) == "F", axis=1)]
+    # remove unnecessary columns
+    grade_df = grade_df[[
+        "ClassName",
+        "StudentFirstName",
+        "StudentLastName",
+        "StudentID",
+        "QuarterAvg"
+    ]]
+    # sort grade_df by class
+    grade_df = grade_df.sort_values("ClassName")
+    # set index to ClassName
+    grade_df = grade_df.set_index("ClassName")
+    failing_students = grade_df
+    template_vars["failing_students"] = grade_df.to_html()
+
+    # III. Get list of unused categories by class.
+    # --
+    # get assignments and categories in dataframes
+    unused_cats_df = get_unused_cats_df()
+    # filter unused categories by teacher
+    unused_cats_df = unused_cats_df[unused_cats_df["TeacherFullname"] == teacher_fullname]
+    # keep only the columns we want
+    unused_cats_df = unused_cats_df[[
+        "ClassName",
+        "CategoryName",
+        "CategoryWeight",
+    ]]
+    # sort unused cats by class
+    unused_cats_df = unused_cats_df.sort_values("ClassName")
+    unused_cats = unused_cats_df
+    template_vars["unused_categories"] = unused_cats.to_html()
+
+    # IV. get top 5 assignments with highest negative impact, grouped by subject
+    # -- 
+    NUM_ASSIGNMENTS_TO_DISPLAY_PER_CLASS = 5
+    # import assignments df
+    assignments_df = get_assignments_df()
+    # filter assignments by teacher
+    assignments_df = assignments_df[assignments_df["TeacherFullname"] == teacher_fullname]
+    # drop all assignments with None, Excused, Incomplete or "" grades.
+    assignments_df = assignments_df[~assignments_df["Score"].isin(("", None, GradeCodes.Excused, GradeCodes.Incomplete))]
+    # group assignments by class name
+    assignments_gdf_by_class = assignments_df.groupby(Cols.ClassName.value)
+    # go through groups and calculate negative impact scores, adding new column for them
+    def add_negative_impact_score_column_and_sort(df):
+        num_assignments = len(df)
+        df["Negative Impact"] = df.apply(lambda row: gbutils.calculate_negative_impact(
+                                                    row[Cols.Score.value], 
+                                                    row[Cols.ScorePossible.value], 
+                                                    row[Cols.CategoryWeight.value],
+                                                    num_assignments), axis=1)
+        df = df.sort_values("Negative Impact", ascending=False)
+        # keep only the top 5 highest impact assignments for each category
+        df = df.head(5)
+        return df
+
+    negative_impact_assignments = assignments_gdf_by_class.apply(add_negative_impact_score_column_and_sort)
+    # keep only the columns we want
+    negative_impact_assignments = negative_impact_assignments[[
+        "ClassName",
+        "ASGName",
+        "CategoryName",
+        "CategoryWeight",
+        "Score",
+        "Negative Impact"
+    ]]
+
+    template_vars["negative_impact_assignments"] = negative_impact_assignments.to_html()
+
+    # V. get category table, by subject, showing name, weight, # assignments, and avg score
+    # --
+    # import assignments df
+    assignments_df = get_assignments_df()
+    # filter assignments by teacher
+    assignments_df = assignments_df[assignments_df["TeacherFullname"] == teacher_fullname]
+    # keep only the columns we want
+    assignments_df = assignments_df[[
+        Cols.Score.value,
+        Cols.ScorePossible.value,
+        Cols.ClassName.value,
+        Cols.CategoryName.value, 
+        Cols.CategoryWeight.value, 
+        "NumAssignments",
+    ]]
+    # group by ClassName
+    assignments_gdf_by_class = assignments_df.groupby(Cols.ClassName.value)
+    # in each ClassName group, subgroup by CategoryName and aggregate values in subgroup
+    def aggregate_by_categoryname(df):
+        return pd.DataFrame([{
+                "AvgGrade": df[Cols.Score.value].mean(),
+                "NumAssigns": len(df),
+                Cols.CategoryWeight.value: df.iloc[0][Cols.CategoryWeight.value], 
+            }])
+    category_table = assignments_gdf_by_class.apply(lambda group: 
+            group.groupby(Cols.CategoryName.value).apply(aggregate_by_categoryname))
+
+    template_vars["category_table"] = category_table.to_html()
+
     # VI. get list of missing/0 assignments, desc sorted
     # --
     # import assignments df
     assignments_df = get_assignments_df()
-    print(assignments_df.columns)
     # filter assignments by teacher
     assignments_df = assignments_df[assignments_df["TeacherFullname"] == teacher_fullname]
     # group by ClassName
@@ -241,9 +273,26 @@ def create_gradebook_summary(teacher_fullname):
                 "# Missing / Zero assignments": group["NumMissing"].sum() + group["NumZero"].sum()
             })
         )
-    print(missing_zero_assignments)
-#
-#    # VII(?). get list of excepted/blank/inc assignments, desc sorted
+    # remove rows with no missing / empty assignments
+    missing_zero_assignments = missing_zero_assignments[missing_zero_assignments["# Missing / Zero assignments"] != 0]
+
+    template_vars["missing_zero_assignments"] = missing_zero_assignments.to_html()
+
+    # render template using template_vars
+    TEMPLATE_DIR = "templates"
+    TEMPLATE_FILE = "gb_report_template.html"
+    env = jinja2.Environment(loader=jinja2.FileSystemLoader(TEMPLATE_DIR))
+    template = env.get_template(TEMPLATE_FILE)
+
+    html_report = template.render(template_vars)
+    OUTPUT_DIR = "./reports"
+    # DEBUG
+    with open("./test.html", "w") as f:
+        f.write(html_report)
+    # END DEBUG
+    # save report as PDF to output dir
+    STYLESHEET_FILE = "./templates/typography.css"
+    weasyprint.HTML(string=html_report, base_url="./").write_pdf(path.join(OUTPUT_DIR, "{} Grade Report.pdf".format(teacher_fullname)), stylesheets=[STYLESHEET_FILE])
 
 if __name__ == "__main__":
     # DEBUG  
