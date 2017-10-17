@@ -1,10 +1,6 @@
-Get assignment category table
+Get Missing/Zero assignments table
 
-* get_gradebook_summary.py
-** import assignment data -> df
-** filter df by teacher
-** group df by className
-** subgroup grouped df by CategoryName
-** aggregate subgroups into single rows
-    containing CategoryName, NumAssigns, Avg Grade, Weight
-
+-- import assignments df
+-- filter by teacher
+-- group by className
+-- aggregate by NumMissing + NumZero

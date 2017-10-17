@@ -198,41 +198,50 @@ def create_gradebook_summary(teacher_fullname):
 #    negative_impact_assignments = assignments_gdf_by_class.apply(add_negative_impact_score_column_and_sort)
 #    # keep only the N highest-impact assignments
 #    negative_impact_assignments = negative_impact_assignments.apply(lambda group: group.head(NUM_ASSIGNMENTS_TO_DISPLAY_PER_CLASS))
-
-    # V. get category table, by subject, showing name, weight, # assignments, and avg score
+#
+#    # V. get category table, by subject, showing name, weight, # assignments, and avg score
+#    # --
+#    # import assignments df
+#    assignments_df = get_assignments_df()
+#    # filter assignments by teacher
+#    assignments_df = assignments_df[assignments_df["TeacherFullname"] == teacher_fullname]
+#    # keep only the columns we want
+#    assignments_df = assignments_df[[
+#        Cols.Score.value,
+#        Cols.ScorePossible.value,
+#        Cols.ClassName.value,
+#        Cols.CategoryName.value, 
+#        Cols.CategoryWeight.value, 
+#        "NumAssignments",
+#    ]]
+#    # group by ClassName
+#    assignments_gdf_by_class = assignments_df.groupby(Cols.ClassName.value)
+#    # in each ClassName group, subgroup by CategoryName and aggregate values in subgroup
+#    def aggregate_by_categoryname(df):
+#        return pd.DataFrame([{
+#                "AvgGrade": df[Cols.Score.value].mean(),
+#                "NumAssigns": len(df),
+#                Cols.CategoryWeight.value: df.iloc[0][Cols.CategoryWeight.value], 
+#            }])
+#    assignments_gdf_by_class = assignments_gdf_by_class.apply(lambda group: 
+#            group.groupby(Cols.CategoryName.value).apply(aggregate_by_categoryname))
+#
+#
+#
+    # VI. get list of missing/0 assignments, desc sorted
     # --
     # import assignments df
     assignments_df = get_assignments_df()
+    print(assignments_df.columns)
     # filter assignments by teacher
     assignments_df = assignments_df[assignments_df["TeacherFullname"] == teacher_fullname]
-    # keep only the columns we want
-    assignments_df = assignments_df[[
-        Cols.Score.value,
-        Cols.ScorePossible.value,
-        Cols.ClassName.value,
-        Cols.CategoryName.value, 
-        Cols.CategoryWeight.value, 
-        "NumAssignments",
-    ]]
     # group by ClassName
     assignments_gdf_by_class = assignments_df.groupby(Cols.ClassName.value)
-    # in each ClassName group, subgroup by CategoryName and aggregate values in subgroup
-    def aggregate_by_categoryname(df):
-        return pd.DataFrame([{
-                "AvgGrade": df[Cols.Score.value].mean(),
-                "NumAssigns": len(df),
-                Cols.CategoryWeight.value: df.iloc[0][Cols.CategoryWeight.value], 
-            }])
-    assignments_gdf_by_class = assignments_gdf_by_class.apply(lambda group: 
-            group.groupby(Cols.CategoryName.value).apply(aggregate_by_categoryname))
-
-
-    # print output
-    print(assignments_gdf_by_class)
-
-#    # VI. get list of missing/0 assignments, desc sorted
-#    sorted_assignments_df = assignments_df.sort_values("NumMissingOrZero")
-#    missing_zero_assignments = sorted_assignments_df.groupby(Cols.SubjectName.value).top(5)
+    missing_zero_assignments = assignments_gdf_by_class.apply(lambda group: pd.Series({
+                "# Missing / Zero assignments": group["NumMissing"].sum() + group["NumZero"].sum()
+            })
+        )
+    print(missing_zero_assignments)
 #
 #    # VII(?). get list of excepted/blank/inc assignments, desc sorted
 
