@@ -70,9 +70,9 @@ def aggregate_assignments(grade_df_subset):
             if np.isnan(avg):
                 print(assignment_grades)
             return avg
-        # if all assignments were None, return None.
+        # if all assignments were None, return nan.
         else:
-            return None
+            return np.nan 
 
 
     def create_assignment_row(group):
@@ -81,10 +81,9 @@ def aggregate_assignments(grade_df_subset):
         # If None, it means that every student's score
         # was marked for 'ignoring' -- ie, either with
         # GradeCodes.Excused or empty ("")
-        group_average_percentage_or_none = average_assignments(group)
-
+        group_average_percentage_or_nan = average_assignments(group)
         assignment_row = {
-                Cols.Score.value: group_average_percentage_or_none,
+                Cols.Score.value: group_average_percentage_or_nan,
                 Cols.ScorePossible.value: float(100),
                 "NumAssignments": len(group),
                 "NumMissing": count_grade_code(group, GradeCodes.Incomplete),

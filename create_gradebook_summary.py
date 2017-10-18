@@ -1,150 +1,44 @@
 from enums import LetterGradeCutoffs, Cols, GradeCodes
 import gbutils
-from gradeconvert import to_percentage_grade, to_letter_grade
+from gradeconvert import to_letter_grade
 import pandas as pd
 import os.path as path
-import matplotlib.pyplot as plt
+from data_access import get_grade_df, get_assignments_df, get_unused_cats_df
+from plots import create_lettergrade_breakdown_diagram
 
 import jinja2
 import weasyprint
 
-def create_lettergrade_breakdown_diagram(**kwargs):
-    """Returns URL of a diagram of letter grade distribution for given grade data.
-    
-    Keyword args:
-    grades: float[] -- list of percentage grades as floats.
-    output_url: str -- valid url to save diagram to. 
-    label: str? -- (optional) label for diagram
+def render_failing_students_table(grade_df):
+    """df -> html"""
+    def get_failing_students_by_class(df):
+        """df -> grouped df"""
+        # filter df by students with scores of F
+        df = df[df.apply(lambda row: to_letter_grade(row["QuarterAvg"], 100) == "F", axis=1)]
+        # group by className
+        df = df.sort_values("ClassName")
+        return df
 
-    Returns:
-    (success: bool, err: Error | None)
-    """
-    grades = kwargs.get("grades", None)
-    output_url = kwargs.get("output_url", None)
-    diagram_label = kwargs.get("label", None)
+    failing_students = get_failing_students_by_class(grade_df)
+    # keep only the columns we want to render
+    failing_students = failing_students[[
+        "ClassName",
+        "StudentFirstName",
+        "StudentLastName",
+        "StudentID",
+        "QuarterAvg"
+    ]]
+    return failing_students.to_html()
 
-    if grades is None:
-        raise ValueError("Missing required keyword argument grades")
-    if output_url is None:
-        raise ValueError("Missing required keyword argument output_url")
-    
-    def create_pie_chart_image(letter_grades, output_url):
-        """Creates image at URL. Returns success(bool), err(Error | None)
-        
-        Positional args:
-        letter_grades: str[] of type ("A" | "B" | "C" | "D" | "F").
-        output_url: str of valid URL to save image to.
-
-        Returns:
-        (success: bool, err: Error | None)
-        """
-        # count number of students with each grade
-        letters = ["A", "B", "C", "D", "F"]
-        letter_grade_counts = {letter: letter_grades.count(letter) for letter in letters 
-                if letter_grades.count(letter) != 0}
-        # create pie chart sizes and label them with corresponding letter grade
-        sizes = []
-        labels = []
-        for letter, count in letter_grade_counts.items():
-            labels.append(letter)
-            sizes.append(count)
-        # create pie chart
-        fig1, ax1 = plt.subplots()
-        pie_chart = ax1.pie(sizes, labels=labels, autopct='%1.1f%%')
-        if diagram_label is not None:
-            plt.title(diagram_label)
-        ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
-        try:
-            plt.savefig(output_url)
-            return (True, None)
-        except IOError as ioErr:
-            return (False, ioErr)
-        except BaseException as e:
-            return (False, e)
-        finally:
-            # grungy necessity due to matplotlib: clear the global
-            # figure that's been created due to earlier call to plt.
-            plt.clf()
-
-    letter_grades = [to_letter_grade(grade, 100) for grade in grades]
-    letter_grades = [grade for grade in letter_grades if grade is not None]
-
-    return create_pie_chart_image(letter_grades, output_url)
-
-def get_grade_df():
-    GRADE_DATA_FILEPATH = "./source/ESCumulativeGradesExtract.csv"
-    df = pd.read_csv(GRADE_DATA_FILEPATH)
-    # fill NaN's with empty string
-    df.fillna("", inplace=True)
-
-    # add column with teacher full name
-    df["TeacherFullname"] = df.apply(lambda row:
-       "{} {}".format(row.loc["TeacherFirstName"], row.loc["TeacherLastName"]), axis=1)
-    
-    # add column with ClassName (SubjectName + StudentHomeroom)
-    df["ClassName"] = df.apply(lambda row:
-            "{} ({})".format(row.loc["SubjectName"], row.loc["StudentHomeroom"]), axis=1)
-
-    return df
-
-def get_assignments_df():
-    ASSIGNMENT_DATA_FILEPATH = "./source/CPSAllAssignmentsandGradesExtract(SlowLoad).csv"
-    df = pd.read_csv(ASSIGNMENT_DATA_FILEPATH)
-    # fill NaN's with empty string
-    df.fillna("", inplace=True)
-
-    # add column with teacher full name
-    df["TeacherFullname"] = df.apply(lambda row:
-       "{} {}".format(row.loc["TeacherFirst"], row.loc["TeacherLast"]), axis=1)
-    
-    # aggregate data on assignment level, folding individual student
-    # assignments into averaged student assignments
-    return gbutils.aggregate_assignments(df)
-
-def get_categories_df():
-    CATEGORY_DATA_FILEPATH = "./source/CPSTeacherCategoriesandTotalPointsLogic.csv"
-    df = pd.read_csv(CATEGORY_DATA_FILEPATH)
-    # fill NaN's with empty string
-    df.fillna("", inplace=True)
-
-    # add column with teacher full name
-    df["TeacherFullname"] = df.apply(lambda row:
-            "{} {}".format(row.loc["TeacherFirstName"], row.loc["TeacherLastName"]), axis=1)
-    return df
-
-def get_unused_cats_df():
-    UNUSED_CATS_FILEPATH = "./source/CPSUnusedCategoriesinTeacherGradebooks.csv"
-    source_df = pd.read_csv(UNUSED_CATS_FILEPATH)
-    # keep only the columns we care about
-    df = pd.DataFrame()
-    # rename "Column Name" -> "ColumnName" for consistency w/ other data sources
-    df["ClassName"] = source_df["Class Name"]
-    df["CategoryName"] = source_df["Unused Category"]
-    df["CategoryWeight"] = source_df["Category Weight"]
-    df["TotalClassAssignments"] = source_df["Total Class Assignments"]
-    # add column with teacher full name
-    df["TeacherFullname"] = source_df.apply(lambda row:
-            "{} {}".format(row.loc["Teacher First"], row.loc["Teacher Last"]), axis=1)
-    return df
-
-def create_gradebook_summary(teacher_fullname):
-
+def render_grade_breakdown_diagrams(grade_df):
+    """df -> html"""
     IMAGE_DIR = "./images/"
-    template_vars = {}
-
-
-    # I. get grade breakdown pie charts
-    # --
-    # get grade data df
-    grade_df = get_grade_df()
-    # filter grade_df by teacher
-    grade_df = grade_df[grade_df["TeacherFullname"] == teacher_fullname]
     # group filtered df by class (Subject + Homeroom) 
-    grade_gdf_by_class = grade_df.groupby("ClassName")
+    gdf = grade_df.groupby("ClassName")
     # create images
     diagram_urls = []
-    for class_name, group in grade_gdf_by_class:
-        diagram_url = path.join(IMAGE_DIR, "{}-{}.png".format(class_name, teacher_fullname))
+    for class_name, group in gdf:
+        diagram_url = path.join(IMAGE_DIR, "{}.png".format(class_name))
         success, err = create_lettergrade_breakdown_diagram(grades=group["QuarterAvg"],
                                                          output_url=diagram_url,
                                                          label=class_name)
@@ -152,38 +46,11 @@ def create_gradebook_summary(teacher_fullname):
             diagram_urls.append(diagram_url)
         else:
             print(err)
+    # TODO: render html for each diagram_url
+    return """<span style="color:red">Implement me!</span>"""
 
-    template_vars["diagram_urls"] = diagram_urls 
-
-    # II. get # of failing students, grouped by subject and homeroom
-    # --
-    # get grade data df
-    grade_df = get_grade_df()
-    # filter grade_df by teacher
-    grade_df = grade_df[grade_df["TeacherFullname"] == teacher_fullname]
-    # filter grade_df again by students with scores of F
-    grade_df = grade_df[grade_df.apply(lambda row: to_letter_grade(row["QuarterAvg"], 100) == "F", axis=1)]
-    # remove unnecessary columns
-    grade_df = grade_df[[
-        "ClassName",
-        "StudentFirstName",
-        "StudentLastName",
-        "StudentID",
-        "QuarterAvg"
-    ]]
-    # sort grade_df by class
-    grade_df = grade_df.sort_values("ClassName")
-    # set index to ClassName
-    grade_df = grade_df.set_index("ClassName")
-    failing_students = grade_df
-    template_vars["failing_students"] = grade_df.to_html()
-
-    # III. Get list of unused categories by class.
-    # --
-    # get assignments and categories in dataframes
-    unused_cats_df = get_unused_cats_df()
-    # filter unused categories by teacher
-    unused_cats_df = unused_cats_df[unused_cats_df["TeacherFullname"] == teacher_fullname]
+def render_unused_categories_df(unused_cats_df):
+    """df -> html"""
     # keep only the columns we want
     unused_cats_df = unused_cats_df[[
         "ClassName",
@@ -192,16 +59,12 @@ def create_gradebook_summary(teacher_fullname):
     ]]
     # sort unused cats by class
     unused_cats_df = unused_cats_df.sort_values("ClassName")
-    unused_cats = unused_cats_df
-    template_vars["unused_categories"] = unused_cats.to_html()
+    unused_cats_df = unused_cats_df.set_index("ClassName")
+    return unused_cats_df.to_html()
 
-    # IV. get top 5 assignments with highest negative impact, grouped by subject
-    # -- 
+def render_negative_impact_assignments(assignments_df):
+    """df -> html"""
     NUM_ASSIGNMENTS_TO_DISPLAY_PER_CLASS = 5
-    # import assignments df
-    assignments_df = get_assignments_df()
-    # filter assignments by teacher
-    assignments_df = assignments_df[assignments_df["TeacherFullname"] == teacher_fullname]
     # drop all assignments with None, Excused, Incomplete or "" grades.
     assignments_df = assignments_df[~assignments_df["Score"].isin(("", None, GradeCodes.Excused, GradeCodes.Incomplete))]
     # group assignments by class name
@@ -216,9 +79,8 @@ def create_gradebook_summary(teacher_fullname):
                                                     num_assignments), axis=1)
         df = df.sort_values("Negative Impact", ascending=False)
         # keep only the top 5 highest impact assignments for each category
-        df = df.head(5)
+        df = df.head(NUM_ASSIGNMENTS_TO_DISPLAY_PER_CLASS)
         return df
-
     negative_impact_assignments = assignments_gdf_by_class.apply(add_negative_impact_score_column_and_sort)
     # keep only the columns we want
     negative_impact_assignments = negative_impact_assignments[[
@@ -229,37 +91,92 @@ def create_gradebook_summary(teacher_fullname):
         "Score",
         "Negative Impact"
     ]]
+    negative_impact_assignments.set_index("ClassName")
+    return negative_impact_assignments.to_html()
 
-    template_vars["negative_impact_assignments"] = negative_impact_assignments.to_html()
-
-    # V. get category table, by subject, showing name, weight, # assignments, and avg score
-    # --
-    # import assignments df
-    assignments_df = get_assignments_df()
-    # filter assignments by teacher
-    assignments_df = assignments_df[assignments_df["TeacherFullname"] == teacher_fullname]
-    # keep only the columns we want
+def render_category_table(assignments_df, unused_cats_df):
+    # filter the cols we want to keep
     assignments_df = assignments_df[[
-        Cols.Score.value,
-        Cols.ScorePossible.value,
-        Cols.ClassName.value,
-        Cols.CategoryName.value, 
-        Cols.CategoryWeight.value, 
-        "NumAssignments",
-    ]]
-    # group by ClassName
-    assignments_gdf_by_class = assignments_df.groupby(Cols.ClassName.value)
-    # in each ClassName group, subgroup by CategoryName and aggregate values in subgroup
-    def aggregate_by_categoryname(df):
-        return pd.DataFrame([{
-                "AvgGrade": df[Cols.Score.value].mean(),
-                "NumAssigns": len(df),
-                Cols.CategoryWeight.value: df.iloc[0][Cols.CategoryWeight.value], 
-            }])
-    category_table = assignments_gdf_by_class.apply(lambda group: 
-            group.groupby(Cols.CategoryName.value).apply(aggregate_by_categoryname))
+            "ClassName",
+            "CategoryName",
+            "CategoryWeight",
+            "Score",
+            "NumAssignments",
+            "NumBlank",
+            "NumExcused",
+            "NumIncomplete",
+            "NumMissing",
+            "NumZero",
+        ]]
+    for _, row in unused_cats_df.iterrows():
+        assignments_df = assignments_df.append(pd.DataFrame({
+                    "ClassName": row["ClassName"],
+                    "CategoryName": row["CategoryName"],
+                    "CategoryWeight": row["CategoryWeight"],
+                    "Score": np.nan,
+                    "NumAssignments": np.nan,
+                    "NumBlank": np.nan,
+                    "NumExcused": np.nan,
+                    "NumIncomplete": np.nan,
+                    "NumMissing": np.nan,
+                    "NumZero": np.nan
+                }, index=[0]), ignore_index=True)
+        
+    assignments_df["Score"] = assignments_df["Score"].astype(float)
+    assignments_pivot = assignments_df.pivot_table(index=["ClassName"], 
+                                                   columns=["CategoryName"],
+                                                   aggfunc={
+                                                        "CategoryWeight": 'first',
+                                                        "Score": np.mean,
+                                                        "NumAssignments": 'count',
+                                                        "NumBlank": np.sum,
+                                                        "NumExcused": np.sum,
+                                                        "NumIncomplete": np.sum,
+                                                        "NumMissing": np.sum,
+                                                        "NumZero": np.sum,
+                                                    }).stack()
+    return assignments_pivot.to_html()
 
-    template_vars["category_table"] = category_table.to_html()
+
+def render_template(template_vars):
+    report_name = teamplate_vars["Report Name"]
+
+    # render html
+    TEMPLATE_DIR = "templates"
+    TEMPLATE_FILE = "gb_report_template.html"
+    env = jinja2.Environment(loader=jinja2.FileSystemLoader(TEMPLATE_DIR))
+    template = env.get_template(TEMPLATE_FILE)
+
+    html_report = template.render(template_vars)
+
+    # render pdf
+    OUTPUT_DIR = "./reports"
+    # save report as PDF to output dir
+    STYLESHEET_FILE = "./templates/typography.css"
+    weasyprint.HTML(string=html_report, base_url="./").write_pdf(path.join(OUTPUT_DIR, "{}.pdf".format(report_name), stylesheets=[STYLESHEET_FILE]))
+
+
+def create_gradebook_summary(teacher_fullname):
+
+    # get data in df form
+    grade_df = get_grade_df()
+    unused_cats_df = get_unused_cats_df()
+    assignments_df = get_assignments_df()
+
+    # filter dfs by teacher
+    grade_df = grade_df[grade_df["TeacherFullname"] == teacher_fullname]
+    unused_cats_df = unused_cats_df[unused_cats_df["TeacherFullname"] == teacher_fullname]
+    assignments_df = assignments_df[assignments_df["TeacherFullname"] == teacher_fullname]
+    
+    template_vars = {}
+
+    template_vars["report_name"] = "{} Grade Report".format(teacher_fullname)
+
+    template_vars["diagram_urls"] = render_grade_breakdown_diagrams(grade_df)
+    template_vars["failing_students"] = render_failing_students_table(grade_df)
+    template_vars["unused_categories"] = render_unused_categories_df(unused_cats_df)
+    template_vars["negative_impact_assignments"] = render_negative_impact_assignments(assignments_df)
+    template_vars["category_table"] = render_category_table(assignments_df, unused_cats_df)
 
     # VI. get list of missing/0 assignments, desc sorted
     # --
@@ -278,21 +195,7 @@ def create_gradebook_summary(teacher_fullname):
 
     template_vars["missing_zero_assignments"] = missing_zero_assignments.to_html()
 
-    # render template using template_vars
-    TEMPLATE_DIR = "templates"
-    TEMPLATE_FILE = "gb_report_template.html"
-    env = jinja2.Environment(loader=jinja2.FileSystemLoader(TEMPLATE_DIR))
-    template = env.get_template(TEMPLATE_FILE)
-
-    html_report = template.render(template_vars)
-    OUTPUT_DIR = "./reports"
-    # DEBUG
-    with open("./test.html", "w") as f:
-        f.write(html_report)
-    # END DEBUG
-    # save report as PDF to output dir
-    STYLESHEET_FILE = "./templates/typography.css"
-    weasyprint.HTML(string=html_report, base_url="./").write_pdf(path.join(OUTPUT_DIR, "{} Grade Report.pdf".format(teacher_fullname)), stylesheets=[STYLESHEET_FILE])
+    render_template(template_vars)
 
 if __name__ == "__main__":
     # DEBUG  
