@@ -109,7 +109,7 @@ def render_negative_impact_assignments(assignments_df):
 def render_category_table(assignments_df, unused_cats_df):
     # filter the cols we want to keep
     assignments_df = assignments_df[[
-            "ClassName",
+            "SubjectName",
             "CategoryName",
             "CategoryWeight",
             "Score",
@@ -122,7 +122,7 @@ def render_category_table(assignments_df, unused_cats_df):
         ]]
     for _, row in unused_cats_df.iterrows():
         assignments_df = assignments_df.append(pd.DataFrame({
-                    "ClassName": row["ClassName"],
+                    "SubjectName": row["SubjectName"],
                     "CategoryName": row["CategoryName"],
                     "CategoryWeight": row["CategoryWeight"],
                     "Score": np.nan,
@@ -135,7 +135,7 @@ def render_category_table(assignments_df, unused_cats_df):
                 }, index=[0]), ignore_index=True)
         
     assignments_df["Score"] = assignments_df["Score"].astype(float)
-    assignments_pivot = assignments_df.pivot_table(index=["ClassName"], 
+    assignments_pivot = assignments_df.pivot_table(index=["SubjectName"], 
                                                    columns=["CategoryName"],
                                                    aggfunc={
                                                         "CategoryWeight": 'first',
@@ -147,7 +147,13 @@ def render_category_table(assignments_df, unused_cats_df):
                                                         "NumMissing": np.sum,
                                                         "NumZero": np.sum,
                                                     }).stack()
-    return assignments_pivot.to_html()
+    assignments_pivot = assignments_pivot.round(decimals=1)
+    assignments_pivot = assignments_pivot.fillna("n/a")
+    # color NumAssignments red if there are no assignments
+    def highlight_rows_with_no_assignments(row):
+        return ["background-color: #ff6347;" if (row["NumAssignments"] == 0) else "" for elem in row]
+    
+    return assignments_pivot.style.apply(highlight_rows_with_no_assignments, axis=1).render()
 
 
 def render_template(template_vars):
@@ -172,6 +178,15 @@ def render_template(template_vars):
     output_path = path.join(OUTPUT_DIR, "{}.pdf".format(report_name))
     weasyprint.HTML(string=html_report, base_url="./").write_pdf(output_path, stylesheets=[STYLESHEET_FILE])
 
+def render_missing_zero_assignments(assignments_df):
+    assignments_gdf_by_subject = assignments_df.groupby("SubjectName")
+    missing_zero_assignments = assignments_gdf_by_subject.apply(lambda group: pd.Series({
+                "# Missing / Zero assignments": group["NumMissing"].sum() + group["NumZero"].sum()
+            })
+        )
+    # remove rows with no missing / empty assignments
+    missing_zero_assignments = missing_zero_assignments[missing_zero_assignments["# Missing / Zero assignments"] != 0]
+    return missing_zero_assignments.to_html()
 
 def create_gradebook_summary(teacher_fullname):
 
@@ -187,30 +202,12 @@ def create_gradebook_summary(teacher_fullname):
 
     template_vars = {}
 
-    template_vars["report_name"] = "{} Grade Report".format(teacher_fullname)
-
     template_vars["grade_breakdown_diagrams"] = render_grade_breakdown_diagrams(grade_df)
     template_vars["failing_students"] = render_failing_students_table(grade_df)
     template_vars["unused_categories"] = render_unused_categories_df(unused_cats_df)
     template_vars["negative_impact_assignments"] = render_negative_impact_assignments(assignments_df)
-    #template_vars["category_table"] = render_category_table(assignments_df, unused_cats_df)
-
-#    # VI. get list of missing/0 assignments, desc sorted
-#    # --
-#    # import assignments df
-#    assignments_df = get_assignments_df()
-#    # filter assignments by teacher
-#    assignments_df = assignments_df[assignments_df["TeacherFullname"] == teacher_fullname]
-#    # group by ClassName
-#    assignments_gdf_by_class = assignments_df.groupby(Cols.ClassName.value)
-#    missing_zero_assignments = assignments_gdf_by_class.apply(lambda group: pd.Series({
-#                "# Missing / Zero assignments": group["NumMissing"].sum() + group["NumZero"].sum()
-#            })
-#        )
-#    # remove rows with no missing / empty assignments
-#    missing_zero_assignments = missing_zero_assignments[missing_zero_assignments["# Missing / Zero assignments"] != 0]
-#
-#    template_vars["missing_zero_assignments"] = missing_zero_assignments.to_html()
+    template_vars["category_table"] = render_category_table(assignments_df, unused_cats_df)
+    template_vars["missing_zero_assignments"] = render_missing_zero_assignments(assignments_df)
 
     template_vars["report_name"] = "Gradebook Report: {}".format(teacher_fullname)
     render_template(template_vars)

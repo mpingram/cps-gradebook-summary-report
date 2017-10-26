@@ -1,4 +1,4 @@
-Show top 5 negative impact assignments across all assignments
+Group CategoryTable by subject (not class)
 
-* ... rather than grouped by class.
-* re-enable unused category table
+* move missing/zero grade code into separate function
+* group missing/zero grades by subject (not class)
