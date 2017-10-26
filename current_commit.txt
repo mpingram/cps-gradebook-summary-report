@@ -1,12 +1,3 @@
-Test and refactor get_gradebook_summary
+Group grade breakdown pie plots by subject instead of class
 
-* get_gradebook_summary.py
-** split each data-getting method up into pure,
-    testable functions
-** reuse as much data-loading code as possible for
-    performance increase
-** minor touch -- color-code letter grades in pie chart
-
-* new file get_gradebook_summary_test.py
-** test each data-getting method for correctness
-    with expectations based off available data
+* modify data_access.py to retain or add SubjectName column to dfs

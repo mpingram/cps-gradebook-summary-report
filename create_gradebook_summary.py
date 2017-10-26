@@ -9,6 +9,35 @@ from plots import create_lettergrade_breakdown_diagram
 import jinja2
 import weasyprint
 
+def render_grade_breakdown_diagrams(grade_df):
+    """df -> html"""
+    IMAGE_DIR = "./images/"
+    # group filtered df by subject
+    gdf = grade_df.groupby("SubjectName")
+    teacher_fullname = grade_df.iloc[0]["TeacherFullname"]
+    # create images
+    diagram_urls = []
+    for subject_name, group in gdf:
+        diagram_url = path.join(IMAGE_DIR, "{} {}.png".format(subject_name, teacher_fullname))
+        diagram_url = diagram_url.replace(" ", "_")
+        success, err = create_lettergrade_breakdown_diagram(grades=group["QuarterAvg"],
+                                                         output_url=diagram_url,
+                                                         label=subject_name)
+        if success:
+            diagram_urls.append(diagram_url)
+        else:
+            print(err)
+
+
+    def create_html(diagram_urls):
+        html = """<div width="100%">"""
+        for url in diagram_urls:
+            html += """<img width="300px" style="float:left;" src="{0}"/>""".format(url)
+        html += """</div>"""
+        return html
+
+    return create_html(diagram_urls)
+
 def render_failing_students_table(grade_df):
     """df -> html"""
     def get_failing_students_by_class(df):
@@ -28,38 +57,20 @@ def render_failing_students_table(grade_df):
         "StudentID",
         "QuarterAvg"
     ]]
+    failing_students = failing_students.set_index("ClassName")
     return failing_students.to_html()
-
-def render_grade_breakdown_diagrams(grade_df):
-    """df -> html"""
-    IMAGE_DIR = "./images/"
-    # group filtered df by class (Subject + Homeroom) 
-    gdf = grade_df.groupby("ClassName")
-    # create images
-    diagram_urls = []
-    for class_name, group in gdf:
-        diagram_url = path.join(IMAGE_DIR, "{}.png".format(class_name))
-        success, err = create_lettergrade_breakdown_diagram(grades=group["QuarterAvg"],
-                                                         output_url=diagram_url,
-                                                         label=class_name)
-        if success:
-            diagram_urls.append(diagram_url)
-        else:
-            print(err)
-    # TODO: render html for each diagram_url
-    return """<span style="color:red">Implement me!</span>"""
 
 def render_unused_categories_df(unused_cats_df):
     """df -> html"""
     # keep only the columns we want
     unused_cats_df = unused_cats_df[[
-        "ClassName",
+        "SubjectName",
         "CategoryName",
         "CategoryWeight",
     ]]
     # sort unused cats by class
-    unused_cats_df = unused_cats_df.sort_values("ClassName")
-    unused_cats_df = unused_cats_df.set_index("ClassName")
+    unused_cats_df = unused_cats_df.sort_values("SubjectName")
+    unused_cats_df = unused_cats_df.set_index("SubjectName")
     return unused_cats_df.to_html()
 
 def render_negative_impact_assignments(assignments_df):
@@ -139,7 +150,7 @@ def render_category_table(assignments_df, unused_cats_df):
 
 
 def render_template(template_vars):
-    report_name = teamplate_vars["Report Name"]
+    report_name = template_vars["report_name"]
 
     # render html
     TEMPLATE_DIR = "templates"
@@ -149,11 +160,16 @@ def render_template(template_vars):
 
     html_report = template.render(template_vars)
 
+    # DEBUG: save html for inspection
+    with open("test.html", "w") as test_file:
+        test_file.write(html_report)
+
     # render pdf
     OUTPUT_DIR = "./reports"
     # save report as PDF to output dir
     STYLESHEET_FILE = "./templates/typography.css"
-    weasyprint.HTML(string=html_report, base_url="./").write_pdf(path.join(OUTPUT_DIR, "{}.pdf".format(report_name), stylesheets=[STYLESHEET_FILE]))
+    output_path = path.join(OUTPUT_DIR, "{}.pdf".format(report_name))
+    weasyprint.HTML(string=html_report, base_url="./").write_pdf(output_path, stylesheets=[STYLESHEET_FILE])
 
 
 def create_gradebook_summary(teacher_fullname):
@@ -172,29 +188,30 @@ def create_gradebook_summary(teacher_fullname):
 
     template_vars["report_name"] = "{} Grade Report".format(teacher_fullname)
 
-    template_vars["diagram_urls"] = render_grade_breakdown_diagrams(grade_df)
+    template_vars["grade_breakdown_diagrams"] = render_grade_breakdown_diagrams(grade_df)
     template_vars["failing_students"] = render_failing_students_table(grade_df)
-    template_vars["unused_categories"] = render_unused_categories_df(unused_cats_df)
-    template_vars["negative_impact_assignments"] = render_negative_impact_assignments(assignments_df)
-    template_vars["category_table"] = render_category_table(assignments_df, unused_cats_df)
+    #template_vars["unused_categories"] = render_unused_categories_df(unused_cats_df)
+    #template_vars["negative_impact_assignments"] = render_negative_impact_assignments(assignments_df)
+    #template_vars["category_table"] = render_category_table(assignments_df, unused_cats_df)
 
-    # VI. get list of missing/0 assignments, desc sorted
-    # --
-    # import assignments df
-    assignments_df = get_assignments_df()
-    # filter assignments by teacher
-    assignments_df = assignments_df[assignments_df["TeacherFullname"] == teacher_fullname]
-    # group by ClassName
-    assignments_gdf_by_class = assignments_df.groupby(Cols.ClassName.value)
-    missing_zero_assignments = assignments_gdf_by_class.apply(lambda group: pd.Series({
-                "# Missing / Zero assignments": group["NumMissing"].sum() + group["NumZero"].sum()
-            })
-        )
-    # remove rows with no missing / empty assignments
-    missing_zero_assignments = missing_zero_assignments[missing_zero_assignments["# Missing / Zero assignments"] != 0]
+#    # VI. get list of missing/0 assignments, desc sorted
+#    # --
+#    # import assignments df
+#    assignments_df = get_assignments_df()
+#    # filter assignments by teacher
+#    assignments_df = assignments_df[assignments_df["TeacherFullname"] == teacher_fullname]
+#    # group by ClassName
+#    assignments_gdf_by_class = assignments_df.groupby(Cols.ClassName.value)
+#    missing_zero_assignments = assignments_gdf_by_class.apply(lambda group: pd.Series({
+#                "# Missing / Zero assignments": group["NumMissing"].sum() + group["NumZero"].sum()
+#            })
+#        )
+#    # remove rows with no missing / empty assignments
+#    missing_zero_assignments = missing_zero_assignments[missing_zero_assignments["# Missing / Zero assignments"] != 0]
+#
+#    template_vars["missing_zero_assignments"] = missing_zero_assignments.to_html()
 
-    template_vars["missing_zero_assignments"] = missing_zero_assignments.to_html()
-
+    template_vars["report_name"] = "Gradebook Report: {}".format(teacher_fullname)
     render_template(template_vars)
 
 if __name__ == "__main__":

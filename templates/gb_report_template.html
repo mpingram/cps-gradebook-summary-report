@@ -8,13 +8,7 @@
 <body style="width:100%;height:100%">
   <div>
     <h5>I. Grade distribution</h5>
-    <div style="width:100%;">
-      {% for url in diagram_urls %}
-      <div style="width: 150px; float: left;">
-        <img  src="{{url}}" style="max-width: 100%" alt="diagram"/>
-      </div>
-      {% endfor %}
-    </div>
+    {{ grade_breakdown_diagrams }}
   </div>
 
   <br>

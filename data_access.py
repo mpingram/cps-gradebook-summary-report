@@ -3,6 +3,14 @@ from gradeconvert import to_percentage_grade, to_letter_grade
 import gbutils
 import os.path as path
 
+
+def get_subject_from_class_name(class_name):
+    class_name = class_name.replace("[", "(")
+    class_name = class_name.replace("]", ")")
+    subject_name = class_name[:class_name.find("(")].strip()
+    #homeroom = class_name[class_name.find("(") + 1:class_name.rfind(")")].strip()
+    return subject_name
+
 def get_grade_df():
     GRADE_DATA_FILEPATH = "./source/ESCumulativeGradesExtract.csv"
     df = pd.read_csv(GRADE_DATA_FILEPATH)
@@ -27,7 +35,11 @@ def get_assignments_df():
 
     # add column with teacher full name
     df["TeacherFullname"] = df.apply(lambda row:
-       "{} {}".format(row.loc["TeacherFirst"], row.loc["TeacherLast"]), axis=1)
+        "{} {}".format(row.loc["TeacherFirst"], row.loc["TeacherLast"]), axis=1)
+
+    # add column with subject name
+    df["SubjectName"] = df.apply(lambda row:
+            get_subject_from_class_name(row["ClassName"]), axis=1)
     
     # aggregate data on assignment level, folding individual student
     # assignments into averaged student assignments
@@ -43,6 +55,10 @@ def get_categories_df():
     # add column with teacher full name
     df["TeacherFullname"] = df.apply(lambda row:
             "{} {}".format(row.loc["TeacherFirstName"], row.loc["TeacherLastName"]), axis=1)
+
+    df["SubjectName"] = df.apply(lambda row:
+            get_subject_from_class_name(row["ClassName"]), axis=1)
+
     return df
 
 def get_unused_cats_df():
@@ -58,4 +74,7 @@ def get_unused_cats_df():
     # add column with teacher full name
     df["TeacherFullname"] = source_df.apply(lambda row:
             "{} {}".format(row.loc["Teacher First"], row.loc["Teacher Last"]), axis=1)
+    # add column with subject by parsing it from class
+    df["SubjectName"] = source_df.apply(lambda row:
+            get_subject_from_class_name(row["Class Name"]), axis=1)
     return df
