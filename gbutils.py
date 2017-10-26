@@ -29,7 +29,7 @@ def get_lettergrade_breakdown(grade_df_subset):
 
 def calculate_negative_impact(score, possible_score, category_weight, num_assignments):
     if score is None:
-        return None
+        return 0 
     elif score < 0:
         raise ValueError("Score {} is negative!".format(score))
     elif score > possible_score:
@@ -70,9 +70,9 @@ def aggregate_assignments(grade_df_subset):
             if np.isnan(avg):
                 print(assignment_grades)
             return avg
-        # if all assignments were None, return nan.
+        # if all assignments were None, return None.
         else:
-            return np.nan 
+            return None 
 
 
     def create_assignment_row(group):

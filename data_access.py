@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 from gradeconvert import to_percentage_grade, to_letter_grade
 import gbutils
 import os.path as path
@@ -8,6 +9,8 @@ def get_subject_from_class_name(class_name):
     class_name = class_name.replace("[", "(")
     class_name = class_name.replace("]", ")")
     subject_name = class_name[:class_name.find("(")].strip()
+    if not subject_name:
+        raise ValueError("No subject_name parsed from {}".format(class_name))
     #homeroom = class_name[class_name.find("(") + 1:class_name.rfind(")")].strip()
     return subject_name
 
@@ -32,18 +35,15 @@ def get_assignments_df():
     df = pd.read_csv(ASSIGNMENT_DATA_FILEPATH)
     # fill NaN's with empty string
     df.fillna("", inplace=True)
-
     # add column with teacher full name
     df["TeacherFullname"] = df.apply(lambda row:
         "{} {}".format(row.loc["TeacherFirst"], row.loc["TeacherLast"]), axis=1)
-
-    # add column with subject name
-    df["SubjectName"] = df.apply(lambda row:
-            get_subject_from_class_name(row["ClassName"]), axis=1)
-    
     # aggregate data on assignment level, folding individual student
     # assignments into averaged student assignments
     df = gbutils.aggregate_assignments(df)
+    # add column with subject name
+    df["SubjectName"] = df.apply(lambda row:
+            get_subject_from_class_name(row["ClassName"]), axis=1)
     return df
 
 def get_categories_df():

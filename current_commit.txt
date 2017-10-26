@@ -1,3 +1,4 @@
-Group grade breakdown pie plots by subject instead of class
+Show top 5 negative impact assignments across all assignments
 
-* modify data_access.py to retain or add SubjectName column to dfs
+* ... rather than grouped by class.
+* re-enable unused category table

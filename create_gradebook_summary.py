@@ -2,6 +2,7 @@ from enums import LetterGradeCutoffs, Cols, GradeCodes
 import gbutils
 from gradeconvert import to_letter_grade
 import pandas as pd
+import numpy as np
 import os.path as path
 from data_access import get_grade_df, get_assignments_df, get_unused_cats_df
 from plots import create_lettergrade_breakdown_diagram
@@ -75,35 +76,35 @@ def render_unused_categories_df(unused_cats_df):
 
 def render_negative_impact_assignments(assignments_df):
     """df -> html"""
-    NUM_ASSIGNMENTS_TO_DISPLAY_PER_CLASS = 5
+    NUM_ASSIGNMENTS_TO_DISPLAY = 5
     # drop all assignments with None, Excused, Incomplete or "" grades.
     assignments_df = assignments_df[~assignments_df["Score"].isin(("", None, GradeCodes.Excused, GradeCodes.Incomplete))]
-    # group assignments by class name
-    assignments_gdf_by_class = assignments_df.groupby(Cols.ClassName.value)
-    # go through groups and calculate negative impact scores, adding new column for them
-    def add_negative_impact_score_column_and_sort(df):
-        num_assignments = len(df)
-        df["Negative Impact"] = df.apply(lambda row: gbutils.calculate_negative_impact(
+    # group assignments by subject name
+    # assignments_gdf_by_class = assignments_df.groupby("SubjectName")
+    # go through assignments and calculate negative impact scores, adding new column for them
+    assignments_df["Negative Impact"] = assignments_df.apply(lambda row: gbutils.calculate_negative_impact(
                                                     row[Cols.Score.value], 
                                                     row[Cols.ScorePossible.value], 
                                                     row[Cols.CategoryWeight.value],
-                                                    num_assignments), axis=1)
-        df = df.sort_values("Negative Impact", ascending=False)
-        # keep only the top 5 highest impact assignments for each category
-        df = df.head(NUM_ASSIGNMENTS_TO_DISPLAY_PER_CLASS)
-        return df
-    negative_impact_assignments = assignments_gdf_by_class.apply(add_negative_impact_score_column_and_sort)
+                                                    len(assignments_df[ 
+                                                        (assignments_df["CategoryName"] == row["CategoryName"]) &
+                                                        (assignments_df["ClassName"] == row["ClassName"])
+                                                    ]),
+                                                ), axis=1)
+    assignments_df = assignments_df.sort_values("Negative Impact", ascending=False)
+    # keep only the top 5 highest impact assignments
+    assignments_df = assignments_df.head(NUM_ASSIGNMENTS_TO_DISPLAY)
     # keep only the columns we want
-    negative_impact_assignments = negative_impact_assignments[[
-        "ClassName",
+    assignments_df = assignments_df[[
+        "SubjectName",
         "ASGName",
         "CategoryName",
         "CategoryWeight",
         "Score",
         "Negative Impact"
     ]]
-    negative_impact_assignments.set_index("ClassName")
-    return negative_impact_assignments.to_html()
+    assignments_df = assignments_df.set_index("SubjectName")
+    return assignments_df.to_html()
 
 def render_category_table(assignments_df, unused_cats_df):
     # filter the cols we want to keep
@@ -183,15 +184,15 @@ def create_gradebook_summary(teacher_fullname):
     grade_df = grade_df[grade_df["TeacherFullname"] == teacher_fullname]
     unused_cats_df = unused_cats_df[unused_cats_df["TeacherFullname"] == teacher_fullname]
     assignments_df = assignments_df[assignments_df["TeacherFullname"] == teacher_fullname]
-    
+
     template_vars = {}
 
     template_vars["report_name"] = "{} Grade Report".format(teacher_fullname)
 
     template_vars["grade_breakdown_diagrams"] = render_grade_breakdown_diagrams(grade_df)
     template_vars["failing_students"] = render_failing_students_table(grade_df)
-    #template_vars["unused_categories"] = render_unused_categories_df(unused_cats_df)
-    #template_vars["negative_impact_assignments"] = render_negative_impact_assignments(assignments_df)
+    template_vars["unused_categories"] = render_unused_categories_df(unused_cats_df)
+    template_vars["negative_impact_assignments"] = render_negative_impact_assignments(assignments_df)
     #template_vars["category_table"] = render_category_table(assignments_df, unused_cats_df)
 
 #    # VI. get list of missing/0 assignments, desc sorted
