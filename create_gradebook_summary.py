@@ -12,6 +12,8 @@ import weasyprint
 
 def render_grade_breakdown_diagrams(grade_df):
     """df -> html"""
+
+
     IMAGE_DIR = "./images/"
     # group filtered df by subject
     gdf = grade_df.groupby("SubjectName")
@@ -19,6 +21,13 @@ def render_grade_breakdown_diagrams(grade_df):
     # create images
     diagram_urls = []
     for subject_name, group in gdf:
+        ### FIXME: CHAVEZ-SPECIFIC LOGIC ###
+        # only perform the pie charting if the subject is Reading, Math, Sci, Soc Sci, or Writing
+        import re
+        matchObj = re.search("CHGO READING FRMWK|MATHEMATICS STD|SCIENCE  STANDARDS|SOCIAL SCIENCE STD|WRITING STANDARDS", subject_name)
+        if not matchObj:
+            continue
+        ### END CHAVEZ-SPECIFIC LOGIC ###
         diagram_url = path.join(IMAGE_DIR, "{} {}.png".format(subject_name, teacher_fullname))
         diagram_url = diagram_url.replace(" ", "_")
         success, err = create_lettergrade_breakdown_diagram(grades=group["QuarterAvg"],
