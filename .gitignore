@@ -4,5 +4,6 @@
 ./**/*.ipynb
 source/
 images/
+reports/
 *.pyc
 ./**/*.pyc

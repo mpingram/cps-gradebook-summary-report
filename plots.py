@@ -33,17 +33,33 @@ def create_lettergrade_breakdown_diagram(**kwargs):
         """
         # count number of students with each grade
         letters = ["A", "B", "C", "D", "F"]
+        colormap = {"A":"green", 
+                "B": "yellowgreen", 
+                "C": "yellow", 
+                "D": "orange", 
+                "F": "red"}
+        # create pie chart sizes and label them with corresponding letter grade
         letter_grade_counts = {letter: letter_grades.count(letter) for letter in letters 
                 if letter_grades.count(letter) != 0}
-        # create pie chart sizes and label them with corresponding letter grade
         sizes = []
         labels = []
+        colors = []
+        # put labels and colors in correct order, skipping letter grades for which
+        # there are no letter grades
         for letter, count in letter_grade_counts.items():
             labels.append(letter)
             sizes.append(count)
+            colors.append(colormap[letter])
         # create pie chart
+        def make_autopct(values):
+            def my_autopct(pct):
+                total = sum(values)
+                val = int(round(pct*total/100.0))
+                return '{v:d}'.format(v=val)
+            return my_autopct
+
         fig1, ax1 = plt.subplots()
-        pie_chart = ax1.pie(sizes, labels=labels, autopct='%1.1f%%')
+        pie_chart = ax1.pie(sizes, colors=colors, labels=labels, autopct=make_autopct(sizes))
         if diagram_label is not None:
             plt.title(diagram_label)
         ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
@@ -58,6 +74,7 @@ def create_lettergrade_breakdown_diagram(**kwargs):
             # grungy necessity due to matplotlib: clear the global
             # figure that's been created due to earlier call to plt.
             plt.clf()
+            plt.close("all")
 
     letter_grades = [to_letter_grade(grade, 100) for grade in grades]
     letter_grades = [grade for grade in letter_grades if grade is not None]

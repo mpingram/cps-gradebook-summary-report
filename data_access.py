@@ -4,6 +4,10 @@ from gradeconvert import to_percentage_grade, to_letter_grade
 import gbutils
 import os.path as path
 
+CACHED_GRADE_DF = None
+CACHED_ASSIGNMENTS_DF = None
+CACHED_CATEGORIES_DF = None
+CACHED_UNUSED_CATEGORIES_DF = None
 
 def get_subject_from_class_name(class_name):
     class_name = class_name.replace("[", "(")
@@ -15,6 +19,11 @@ def get_subject_from_class_name(class_name):
     return subject_name
 
 def get_grade_df():
+
+    global CACHED_GRADE_DF
+    if CACHED_GRADE_DF is not None:
+        return CACHED_GRADE_DF
+
     GRADE_DATA_FILEPATH = "./source/ESCumulativeGradesExtract.csv"
     df = pd.read_csv(GRADE_DATA_FILEPATH)
     # fill NaN's with empty string
@@ -28,9 +37,15 @@ def get_grade_df():
     df["ClassName"] = df.apply(lambda row:
             "{} ({})".format(row.loc["SubjectName"], row.loc["StudentHomeroom"]), axis=1)
 
+    CACHED_GRADE_DF = df
     return df
 
 def get_assignments_df():
+
+    global CACHED_ASSIGNMENTS_DF
+    if CACHED_ASSIGNMENTS_DF is not None:
+        return CACHED_ASSIGNMENTS_DF
+
     ASSIGNMENT_DATA_FILEPATH = "./source/CPSAllAssignmentsandGradesExtract(SlowLoad).csv"
     df = pd.read_csv(ASSIGNMENT_DATA_FILEPATH)
     # fill NaN's with empty string
@@ -44,9 +59,16 @@ def get_assignments_df():
     # add column with subject name
     df["SubjectName"] = df.apply(lambda row:
             get_subject_from_class_name(row["ClassName"]), axis=1)
+
+    CACHED_ASSIGNMENTS_DF = df
     return df
 
 def get_categories_df():
+
+    global CACHED_CATEGORIES_DF
+    if CACHED_CATEGORIES_DF is not None:
+        return CACHED_CATEGORIES_DF
+
     CATEGORY_DATA_FILEPATH = "./source/CPSTeacherCategoriesandTotalPointsLogic.csv"
     df = pd.read_csv(CATEGORY_DATA_FILEPATH)
     # fill NaN's with empty string
@@ -59,9 +81,15 @@ def get_categories_df():
     df["SubjectName"] = df.apply(lambda row:
             get_subject_from_class_name(row["ClassName"]), axis=1)
 
+    CACHED_CATEGORIES_DF = df
     return df
 
 def get_unused_cats_df():
+
+    global CACHED_UNUSED_CATEGORIES_DF
+    if CACHED_UNUSED_CATEGORIES_DF is not None:
+        return CACHED_UNUSED_CATEGORIES_DF
+
     UNUSED_CATS_FILEPATH = "./source/CPSUnusedCategoriesinTeacherGradebooks.csv"
     source_df = pd.read_csv(UNUSED_CATS_FILEPATH)
     # keep only the columns we care about
@@ -77,4 +105,6 @@ def get_unused_cats_df():
     # add column with subject by parsing it from class
     df["SubjectName"] = source_df.apply(lambda row:
             get_subject_from_class_name(row["Class Name"]), axis=1)
+
+    CACHED_UNUSED_CATEGORIES_DF = df
     return df

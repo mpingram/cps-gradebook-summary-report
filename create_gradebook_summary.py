@@ -94,13 +94,15 @@ def render_negative_impact_assignments(assignments_df):
     assignments_df = assignments_df.sort_values("Negative Impact", ascending=False)
     # keep only the top 5 highest impact assignments
     assignments_df = assignments_df.head(NUM_ASSIGNMENTS_TO_DISPLAY)
+    # rename Score -> AvgScore
+    assignments_df["AvgScore"] = assignments_df["Score"]
     assignments_df = assignments_df[[
     # keep only the columns we want
         "SubjectName",
         "ASGName",
         "CategoryName",
         "CategoryWeight",
-        "Score",
+        "AvgScore",
         "Negative Impact"
     ]]
     assignments_df = assignments_df.set_index("SubjectName")
@@ -218,10 +220,5 @@ def create_gradebook_summary(teacher_fullname):
     template_vars["category_table"] = render_category_table(assignments_df, unused_cats_df)
     template_vars["missing_zero_assignments"] = render_missing_zero_assignments(assignments_df)
 
-    template_vars["report_name"] = "Gradebook Report: {}".format(teacher_fullname)
+    template_vars["report_name"] = "Gradebook Report - {}".format(teacher_fullname)
     render_template(template_vars)
-
-if __name__ == "__main__":
-    # DEBUG  
-    DEBUG_NAME = "Karen Baggot"
-    create_gradebook_summary(DEBUG_NAME)
