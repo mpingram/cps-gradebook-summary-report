@@ -63,15 +63,13 @@ def render_failing_students_table(grade_df):
 
 def render_unused_categories_df(unused_cats_df):
     """df -> html"""
+    unused_cats_df = unused_cats_df.set_index("SubjectName")
     # keep only the columns we want
     unused_cats_df = unused_cats_df[[
-        "SubjectName",
         "CategoryName",
         "CategoryWeight",
     ]]
-    # sort unused cats by class
-    unused_cats_df = unused_cats_df.sort_values("SubjectName")
-    unused_cats_df = unused_cats_df.set_index("SubjectName")
+    unused_cats_df = unused_cats_df.drop_duplicates()
     return unused_cats_df.to_html()
 
 def render_negative_impact_assignments(assignments_df):
@@ -80,32 +78,55 @@ def render_negative_impact_assignments(assignments_df):
     # drop all assignments with None, Excused, Incomplete or "" grades.
     assignments_df = assignments_df[~assignments_df["Score"].isin(("", None, GradeCodes.Excused, GradeCodes.Incomplete))]
     # group assignments by subject name
-    # assignments_gdf_by_class = assignments_df.groupby("SubjectName")
+    assignments_df_by_subject = assignments_df.groupby("SubjectName", as_index=False)
     # go through assignments and calculate negative impact scores, adding new column for them
-    assignments_df["Negative Impact"] = assignments_df.apply(lambda row: gbutils.calculate_negative_impact(
-                                                    row[Cols.Score.value], 
-                                                    row[Cols.ScorePossible.value], 
-                                                    row[Cols.CategoryWeight.value],
-                                                    len(assignments_df[ 
-                                                        (assignments_df["CategoryName"] == row["CategoryName"]) &
-                                                        (assignments_df["ClassName"] == row["ClassName"])
-                                                    ]),
-                                                ), axis=1)
-    assignments_df = assignments_df.sort_values("Negative Impact", ascending=False)
+    def create_negative_impact_column(df):
+        df["Negative Impact"] = df.apply(lambda row: gbutils.calculate_negative_impact(
+                                                        row[Cols.Score.value], 
+                                                        row[Cols.ScorePossible.value], 
+                                                        row[Cols.CategoryWeight.value],
+                                                        len(assignments_df[ 
+                                                            (assignments_df["CategoryName"] == row["CategoryName"]) &
+                                                            (assignments_df["ClassName"] == row["ClassName"])
+                                                        ]),
+                                                    ), axis=1)
+        #df["Negative Impact"] = df["Negative Impact"].fillna(value=np.nan)
+        df["Negative Impact"] = df["Negative Impact"].astype(float)
+        df["Score"] = df["Score"].astype(float)
+        df = df[[
+            "SubjectName",
+            "ASGName",
+            "CategoryName",
+            "CategoryWeight",
+            "Score",
+            "Negative Impact"
+            ]]
+        df = df.groupby("ASGName", as_index=False).agg({
+            "SubjectName": "first",
+            "CategoryName": "first",
+            "CategoryWeight": "first",
+            "Score": "mean",
+            "Negative Impact": "mean"
+            })
+        return df
+
+    assignments_df = assignments_df_by_subject.apply(create_negative_impact_column)
+    assignments_df.reset_index(inplace=True, drop=True)
     # keep only the top 5 highest impact assignments
-    assignments_df = assignments_df.head(NUM_ASSIGNMENTS_TO_DISPLAY)
+    assignments_df = assignments_df.sort_values(["Negative Impact"], ascending=False)
+    assignments_df = assignments_df.head(5)
     # rename Score -> AvgScore
     assignments_df["AvgScore"] = assignments_df["Score"]
-    assignments_df = assignments_df[[
+    # set index to SubjectName
+    assignments_df.set_index("SubjectName", inplace=True)
     # keep only the columns we want
-        "SubjectName",
+    assignments_df = assignments_df[[
         "ASGName",
         "CategoryName",
         "CategoryWeight",
         "AvgScore",
         "Negative Impact"
     ]]
-    assignments_df = assignments_df.set_index("SubjectName")
     return assignments_df.to_html()
 
 def render_category_table(assignments_df, unused_cats_df):
