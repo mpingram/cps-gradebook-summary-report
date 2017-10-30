@@ -33,7 +33,7 @@ def render_grade_breakdown_diagrams(grade_df):
     def create_html(diagram_urls):
         html = """<div width="100%">"""
         for url in diagram_urls:
-            html += """<img width="300px" style="float:left;" src="{0}"/>""".format(url)
+            html += """<img style="width: 350px;" src="{0}"/>""".format(url)
         html += """</div>"""
         return html
 
@@ -94,8 +94,8 @@ def render_negative_impact_assignments(assignments_df):
     assignments_df = assignments_df.sort_values("Negative Impact", ascending=False)
     # keep only the top 5 highest impact assignments
     assignments_df = assignments_df.head(NUM_ASSIGNMENTS_TO_DISPLAY)
-    # keep only the columns we want
     assignments_df = assignments_df[[
+    # keep only the columns we want
         "SubjectName",
         "ASGName",
         "CategoryName",
@@ -149,6 +149,15 @@ def render_category_table(assignments_df, unused_cats_df):
                                                     }).stack()
     assignments_pivot = assignments_pivot.round(decimals=1)
     assignments_pivot = assignments_pivot.fillna("n/a")
+    assignments_pivot["AvgScore"] = assignments_pivot["Score"]
+    assignments_pivot = assignments_pivot[[
+            "CategoryWeight",
+            "AvgScore",
+            "NumAssignments",
+            "NumMissing",
+            "NumZero"
+        ]]
+    assignments_pivot.style.set_properties(**{'font-size':'6pt'})
     # color NumAssignments red if there are no assignments
     def highlight_rows_with_no_assignments(row):
         return ["background-color: #ff6347;" if (row["NumAssignments"] == 0) else "" for elem in row]

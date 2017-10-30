@@ -5,11 +5,15 @@
   <title>{{teacher_fullname}} gradebook report</title>
   <link rel="stylesheet" href="templates/typography.css">
   <style>
+  @page {
+      size: letter;
+      margin: 0in 0.44in 0.2in 0.44in;
+  }
   .block {
+    /*page-break-before: always;*/
     width: 100%;
     border-bottom: 1px dashed #444;
     margin: 1em 0;
-    float: left;
   }
   </style>
 </head>
@@ -35,7 +39,7 @@
     {{ negative_impact_assignments }}
   </div>
 
-  <div class="block">
+  <div class="block" id="category-table">
     <h5>V. Category table </h5>
     {{ category_table  }}
   </div>
