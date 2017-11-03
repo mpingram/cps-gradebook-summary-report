@@ -3,11 +3,20 @@ import numpy as np
 from gradeconvert import to_percentage_grade, to_letter_grade
 import gbutils
 import os.path as path
+import re
 
 CACHED_GRADE_DF = None
 CACHED_ASSIGNMENTS_DF = None
 CACHED_CATEGORIES_DF = None
 CACHED_UNUSED_CATEGORIES_DF = None
+
+def is_main_subject(subject_name):
+    # return true if the subject is Reading, Math, Sci, Soc Sci, or Writing
+    matchObj = re.search("CHGO READING FRMWK|MATHEMATICS STD|SCIENCE  STANDARDS|SOCIAL SCIENCE STD|WRITING STANDARDS", subject_name)
+    if matchObj:
+        return True
+    else:
+        return False
 
 def get_subject_from_class_name(class_name):
     class_name = class_name.replace("[", "(")
@@ -37,6 +46,11 @@ def get_grade_df():
     df["ClassName"] = df.apply(lambda row:
             "{} ({})".format(row.loc["SubjectName"], row.loc["StudentHomeroom"]), axis=1)
 
+    # CHAVEZ SPECIFIC LOGIC - may not apply to other schools #
+    # filter all grades, keeping only grades where SubjectName is what we want
+    df = df[df["SubjectName"].apply(is_main_subject)]
+    # END CHAVEZ SPECIFIC LOGIC #
+
     CACHED_GRADE_DF = df
     return df
 
@@ -60,6 +74,11 @@ def get_assignments_df():
     df["SubjectName"] = df.apply(lambda row:
             get_subject_from_class_name(row["ClassName"]), axis=1)
 
+    # CHAVEZ SPECIFIC LOGIC - may not apply to other schools #
+    # filter all grades, keeping only grades where SubjectName is what we want
+    df = df[df["SubjectName"].apply(is_main_subject)]
+    # END CHAVEZ SPECIFIC LOGIC #
+
     CACHED_ASSIGNMENTS_DF = df
     return df
 
@@ -80,6 +99,11 @@ def get_categories_df():
 
     df["SubjectName"] = df.apply(lambda row:
             get_subject_from_class_name(row["ClassName"]), axis=1)
+
+    # CHAVEZ SPECIFIC LOGIC - may not apply to other schools #
+    # filter all grades, keeping only grades where SubjectName is what we want
+    df = df[df["SubjectName"].apply(is_main_subject)]
+    # END CHAVEZ SPECIFIC LOGIC #
 
     CACHED_CATEGORIES_DF = df
     return df
@@ -105,6 +129,11 @@ def get_unused_cats_df():
     # add column with subject by parsing it from class
     df["SubjectName"] = source_df.apply(lambda row:
             get_subject_from_class_name(row["Class Name"]), axis=1)
+
+    # CHAVEZ SPECIFIC LOGIC - may not apply to other schools #
+    # filter all grades, keeping only grades where SubjectName is what we want
+    df = df[df["SubjectName"].apply(is_main_subject)]
+    # END CHAVEZ SPECIFIC LOGIC #
 
     CACHED_UNUSED_CATEGORIES_DF = df
     return df

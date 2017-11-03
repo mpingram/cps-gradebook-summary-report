@@ -1,4 +1,8 @@
-Group CategoryTable by subject (not class)
+Filter all assignment operations by main subjects
 
-* move missing/zero grade code into separate function
-* group missing/zero grades by subject (not class)
+* added subject-filtering logic to all data access methods
+  in data-access.py
+* removed subject-filtereing logic from render_grade_breakdown
+  method of create_gradebook_summary.py
+
+* NOTE main subjects are math, reading, sci, soc sci, and writing.
