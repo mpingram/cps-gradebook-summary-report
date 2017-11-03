@@ -197,6 +197,21 @@ def render_category_table(assignments_df, unused_cats_df):
     return assignments_pivot.style.apply(highlight_rows_with_no_assignments, axis=1).render()
 
 
+CACHED_MOST_RECENT_ASSIGNMENT_DATE = None
+def get_most_recent_assignment_entered_date():
+    global CACHED_MOST_RECENT_ASSIGNMENT_DATE
+    if CACHED_MOST_RECENT_ASSIGNMENT_DATE is not None:
+        return CACHED_MOST_RECENT_ASSIGNMENT_DATE
+
+    assignments_df = get_assignments_df()
+    if (assignments_df["GradeEnteredOn"].dtype != 'datetime64'):
+        dates = pd.to_datetime(assignments_df["GradeEnteredOn"])
+    else:
+        dates = assignments_df["GradeEnteredOn"]
+    most_recent_date = dates.max()
+    CACHED_MOST_RECENT_ASSIGNMENT_DATE = most_recent_date
+    return most_recent_date
+
 def render_template(template_vars):
     report_name = template_vars["report_name"]
 
@@ -249,6 +264,7 @@ def create_gradebook_summary(teacher_fullname):
     template_vars["negative_impact_assignments"] = render_negative_impact_assignments(assignments_df)
     template_vars["category_table"] = render_category_table(assignments_df, unused_cats_df)
     template_vars["missing_zero_assignments"] = render_missing_zero_assignments(assignments_df)
+    template_vars["most_recent_grade_date"] = get_most_recent_assignment_entered_date()
 
     template_vars["report_name"] = "Gradebook Report - {}".format(teacher_fullname)
     render_template(template_vars)
