@@ -1,8 +1,12 @@
-Filter all assignment operations by main subjects
+[WIP]Print reports by homeroom and teacher
 
-* added subject-filtering logic to all data access methods
-  in data-access.py
-* removed subject-filtereing logic from render_grade_breakdown
-  method of create_gradebook_summary.py
+* change data acces methods to add Homeroom column to all student data
+* minor change create_gradebook_summary.py to filter data by homeroom
+*   and teacher
+* TODO change create_gradebook_summary.py to not print report if combination
+    of teacher/homeroom filtering results in empty df
+* TODO may need to change image saving code ... goes to show about future-
+    proof abstractions I guess
+* TODO add hr list to main.py
 
-* NOTE main subjects are math, reading, sci, soc sci, and writing.
+* NOTE previously, reports had been organized by teacher only

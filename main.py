@@ -1,6 +1,7 @@
 from create_gradebook_summary import create_gradebook_summary
 
 if __name__ == "__main__":
+
     teacher_fullname_list = [
             "Luz Escobar",
             "Maria DeSanto",
@@ -33,6 +34,10 @@ if __name__ == "__main__":
             "Litaysha Turner",
             "Mary Iverson"
         ]
+
+    teacher_homeroom_table = [
+            # weh
+            ]
 
     for teacher in teacher_fullname_list:
         print("Printing gradebook summary for {}...".format(teacher))

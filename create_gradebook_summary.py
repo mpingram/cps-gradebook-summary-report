@@ -236,7 +236,7 @@ def render_missing_zero_assignments(assignments_df):
     missing_zero_assignments = missing_zero_assignments[missing_zero_assignments["# Missing / Zero assignments"] != 0]
     return missing_zero_assignments.to_html()
 
-def create_gradebook_summary(teacher_fullname):
+def create_gradebook_summary(teacher_fullname, homeroom):
 
     # get data in df form
     grade_df = get_grade_df()
@@ -248,15 +248,21 @@ def create_gradebook_summary(teacher_fullname):
     unused_cats_df = unused_cats_df[unused_cats_df["TeacherFullname"] == teacher_fullname]
     assignments_df = assignments_df[assignments_df["TeacherFullname"] == teacher_fullname]
 
+    # filter dfs by homeroom
+    grade_df = grade_df[grade_df["Homeroom"] == homeroom]
+    unused_cats_df = unused_cats_df[unused_cats_df["Homeroom"] == homeroom]
+    assignments_df = assignments_df[assignments_df["Homeroom"] == homeroom]
+    
     template_vars = {}
 
     template_vars["grade_breakdown_diagrams"] = render_grade_breakdown_diagrams(grade_df)
     template_vars["failing_students"] = render_failing_students_table(grade_df)
     template_vars["unused_categories"] = render_unused_categories_df(unused_cats_df)
     template_vars["negative_impact_assignments"] = render_negative_impact_assignments(assignments_df)
-    template_vars["category_table"] = render_category_table(assignments_df, unused_cats_df)
     template_vars["missing_zero_assignments"] = render_missing_zero_assignments(assignments_df)
+    template_vars["category_table"] = render_category_table(assignments_df, unused_cats_df)
     template_vars["most_recent_grade_date"] = get_most_recent_assignment_entered_date()
 
-    template_vars["report_name"] = "Gradebook Report - {}".format(teacher_fullname)
+    template_vars["report_name"] = "Gradebook Report - {} - {}".format(homeroom, teacher_fullname)
+
     render_template(template_vars)

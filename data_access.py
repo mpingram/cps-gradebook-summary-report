@@ -19,6 +19,8 @@ def is_main_subject(subject_name):
         return False
 
 def get_subject_from_class_name(class_name):
+    # HACK: for some bizarre reason on of the entries encloses the homeroom
+    # with a ']' insted of a ')'
     class_name = class_name.replace("[", "(")
     class_name = class_name.replace("]", ")")
     subject_name = class_name[:class_name.find("(")].strip()
@@ -26,6 +28,16 @@ def get_subject_from_class_name(class_name):
         raise ValueError("No subject_name parsed from {}".format(class_name))
     #homeroom = class_name[class_name.find("(") + 1:class_name.rfind(")")].strip()
     return subject_name
+
+def get_hr_from_class_name(class_name):
+    # HACK: for some bizarre reason on of the entries encloses the homeroom
+    # with a ']' insted of a ')'
+    class_name = class_name.replace("[", "(")
+    class_name = class_name.replace("]", ")")
+    homeroom = class_name[class_name.find("(") + 1:class_name.rfind(")")].strip()
+    if not homeroom:
+        raise ValueError("No homeroom parsed from {}".format(homeroom))
+    return homerooom
 
 def get_grade_df():
 
@@ -74,6 +86,10 @@ def get_assignments_df():
     df["SubjectName"] = df.apply(lambda row:
             get_subject_from_class_name(row["ClassName"]), axis=1)
 
+    # add column with homeroom
+    df["Homeroom"] = df.apply(lambda row:
+            get_hr_from_class_name(row["ClassName"]), axis=1)
+
     # CHAVEZ SPECIFIC LOGIC - may not apply to other schools #
     # filter all grades, keeping only grades where SubjectName is what we want
     df = df[df["SubjectName"].apply(is_main_subject)]
@@ -97,8 +113,13 @@ def get_categories_df():
     df["TeacherFullname"] = df.apply(lambda row:
             "{} {}".format(row.loc["TeacherFirstName"], row.loc["TeacherLastName"]), axis=1)
 
+    # add column with subject name
     df["SubjectName"] = df.apply(lambda row:
             get_subject_from_class_name(row["ClassName"]), axis=1)
+
+    # add column with homeroom
+    df["Homeroom"] = df.apply(lambda row:
+            get_hr_from_class_name(row["ClassName"]), axis=1)
 
     # CHAVEZ SPECIFIC LOGIC - may not apply to other schools #
     # filter all grades, keeping only grades where SubjectName is what we want
@@ -123,12 +144,19 @@ def get_unused_cats_df():
     df["CategoryName"] = source_df["Unused Category"]
     df["CategoryWeight"] = source_df["Category Weight"]
     df["TotalClassAssignments"] = source_df["Total Class Assignments"]
+
     # add column with teacher full name
     df["TeacherFullname"] = source_df.apply(lambda row:
             "{} {}".format(row.loc["Teacher First"], row.loc["Teacher Last"]), axis=1)
+
     # add column with subject by parsing it from class
     df["SubjectName"] = source_df.apply(lambda row:
             get_subject_from_class_name(row["Class Name"]), axis=1)
+
+    # add column with homeroom
+    df["Homeroom"] = df.apply(lambda row:
+            get_hr_from_class_name(row["ClassName"]), axis=1)
+
 
     # CHAVEZ SPECIFIC LOGIC - may not apply to other schools #
     # filter all grades, keeping only grades where SubjectName is what we want
