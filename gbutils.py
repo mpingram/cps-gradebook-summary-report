@@ -85,7 +85,7 @@ def aggregate_assignments(grade_df_subset):
         assignment_row = {
                 Cols.Score.value: group_average_percentage_or_nan,
                 Cols.ScorePossible.value: float(100),
-                "NumAssignments": len(group),
+                "NumAssignments": len(group.index),
                 "NumMissing": count_grade_code(group, GradeCodes.Incomplete),
                 "NumIncomplete": count_grade_code(group, GradeCodes.Incomplete),
                 "NumExcused": count_grade_code(group ,GradeCodes.Excused),

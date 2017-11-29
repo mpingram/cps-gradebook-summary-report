@@ -37,7 +37,7 @@ def get_hr_from_class_name(class_name):
     homeroom = class_name[class_name.find("(") + 1:class_name.rfind(")")].strip()
     if not homeroom:
         raise ValueError("No homeroom parsed from {}".format(homeroom))
-    return homerooom
+    return homeroom
 
 def get_grade_df():
 
@@ -57,6 +57,9 @@ def get_grade_df():
     # add column with ClassName (SubjectName + StudentHomeroom)
     df["ClassName"] = df.apply(lambda row:
             "{} ({})".format(row.loc["SubjectName"], row.loc["StudentHomeroom"]), axis=1)
+
+    # add Homeroom column for consistency with other data sources
+    df["Homeroom"] = df["StudentHomeroom"]
 
     # CHAVEZ SPECIFIC LOGIC - may not apply to other schools #
     # filter all grades, keeping only grades where SubjectName is what we want

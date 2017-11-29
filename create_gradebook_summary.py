@@ -236,6 +236,7 @@ def render_missing_zero_assignments(assignments_df):
     missing_zero_assignments = missing_zero_assignments[missing_zero_assignments["# Missing / Zero assignments"] != 0]
     return missing_zero_assignments.to_html()
 
+# returns success: boolean
 def create_gradebook_summary(teacher_fullname, homeroom):
 
     # get data in df form
@@ -252,6 +253,10 @@ def create_gradebook_summary(teacher_fullname, homeroom):
     grade_df = grade_df[grade_df["Homeroom"] == homeroom]
     unused_cats_df = unused_cats_df[unused_cats_df["Homeroom"] == homeroom]
     assignments_df = assignments_df[assignments_df["Homeroom"] == homeroom]
+
+    # if dfs are empty, skip
+    if grade_df.empty or unused_cats_df.empty or assignments_df.empty:
+        return False
     
     template_vars = {}
 
@@ -266,3 +271,4 @@ def create_gradebook_summary(teacher_fullname, homeroom):
     template_vars["report_name"] = "Gradebook Report - {} - {}".format(homeroom, teacher_fullname)
 
     render_template(template_vars)
+    return True
