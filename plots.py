@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import numpy as np
 from gradeconvert import to_letter_grade
 
 def create_lettergrade_breakdown_diagram(**kwargs):
@@ -39,16 +40,17 @@ def create_lettergrade_breakdown_diagram(**kwargs):
                 "D": "orange", 
                 "F": "red"}
         # create pie chart sizes and label them with corresponding letter grade
-        letter_grade_counts = {letter: letter_grades.count(letter) for letter in letters 
-                if letter_grades.count(letter) != 0}
-        sizes = []
+        letter_grade_counts = {letter: letter_grades.count(letter) for letter in letters}
+        #letter_grade_counts = {letter: letter_grades.count(letter) for letter in letters 
+               # if letter_grades.count(letter) != 0}
+        grade_counts = []
         labels = []
         colors = []
         # put labels and colors in correct order, skipping letter grades for which
         # there are no letter grades
         for letter, count in letter_grade_counts.items():
             labels.append(letter)
-            sizes.append(count)
+            grade_counts.append(count)
             colors.append(colormap[letter])
         # create pie chart
         def make_autopct(values):
@@ -57,9 +59,9 @@ def create_lettergrade_breakdown_diagram(**kwargs):
                 val = int(round(pct*total/100.0))
                 return '{v:d}'.format(v=val)
             return my_autopct
-
         fig1, ax1 = plt.subplots()
-        pie_chart = ax1.pie(sizes, colors=colors, labels=labels, autopct=make_autopct(sizes))
+        bar_width = 1.2
+        chart = ax1.bar(np.arange(len(grade_counts)), grade_counts, bar_width, color=colors, tick_label=labels)
         if diagram_label is not None:
             plt.title(diagram_label)
         ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.

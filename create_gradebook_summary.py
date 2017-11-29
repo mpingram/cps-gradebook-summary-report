@@ -34,7 +34,7 @@ def render_grade_breakdown_diagrams(grade_df):
     def create_html(diagram_urls):
         html = """<div width="100%">"""
         for url in diagram_urls:
-            html += """<img style="width: 350px;" src="{0}"/>""".format(url)
+            html += """<img style="width: 200px;" src="{0}"/>""".format(url)
         html += """</div>"""
         return html
 
@@ -255,16 +255,16 @@ def create_gradebook_summary(teacher_fullname, homeroom):
     assignments_df = assignments_df[assignments_df["Homeroom"] == homeroom]
 
     # if dfs are empty, skip
-    if grade_df.empty or unused_cats_df.empty or assignments_df.empty:
+    if grade_df.empty and unused_cats_df.empty and assignments_df.empty:
         return False
     
     template_vars = {}
 
     template_vars["grade_breakdown_diagrams"] = render_grade_breakdown_diagrams(grade_df)
     template_vars["failing_students"] = render_failing_students_table(grade_df)
-    template_vars["unused_categories"] = render_unused_categories_df(unused_cats_df)
+    #template_vars["unused_categories"] = render_unused_categories_df(unused_cats_df)
     template_vars["negative_impact_assignments"] = render_negative_impact_assignments(assignments_df)
-    template_vars["missing_zero_assignments"] = render_missing_zero_assignments(assignments_df)
+    #template_vars["missing_zero_assignments"] = render_missing_zero_assignments(assignments_df)
     template_vars["category_table"] = render_category_table(assignments_df, unused_cats_df)
     template_vars["most_recent_grade_date"] = get_most_recent_assignment_entered_date()
 

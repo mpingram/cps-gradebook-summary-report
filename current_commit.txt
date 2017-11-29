@@ -1,12 +1,7 @@
-[WIP]Print reports by homeroom and teacher
+Update report template
 
-* change data acces methods to add Homeroom column to all student data
-* minor change create_gradebook_summary.py to filter data by homeroom
-*   and teacher
-* TODO change create_gradebook_summary.py to not print report if combination
-    of teacher/homeroom filtering results in empty df
-* TODO may need to change image saving code ... goes to show about future-
-    proof abstractions I guess
-* TODO add hr list to main.py
+* shrink pie chart size
+* remove unused categories table
+* remove missing/zero table
 
-* NOTE previously, reports had been organized by teacher only
+

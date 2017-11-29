@@ -47,5 +47,5 @@ if __name__ == "__main__":
         for homeroom in homeroom_list:
             success = create_gradebook_summary(teacher, homeroom)
             if success:
-                print("Printedgradebook summary for {}-{}...".format(homeroom, teacher))
+                print("Printed gradebook summary for {}-{}...".format(homeroom, teacher))
 
