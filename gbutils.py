@@ -57,12 +57,9 @@ def count_grade_code(df, grade_code):
     return len(s) 
 
 def aggregate_assignments(grade_df_subset):
-    # get average percentage grade for each assignment
-    gdf = grade_df_subset.groupby([Cols.AssignmentName.value, 
-                                   Cols.ClassName.value])
-    def average_assignments(group):
+    def average_assignments(df):
         assignment_grades = [to_percentage_grade(row[Cols.Score.value], row[Cols.ScorePossible.value])
-                                for _,row in group.iterrows()]
+                                for _,row in df.iterrows()]
         # remove None values
         assignment_grades = [a for a in assignment_grades if a is not None]
         if len(assignment_grades) > 0:
@@ -107,6 +104,8 @@ def aggregate_assignments(grade_df_subset):
 
         return assignment_row
 
+    gdf = grade_df_subset.groupby([Cols.AssignmentName.value, 
+                                   Cols.ClassName.value])
     aggregated_df = pd.DataFrame()
     for name, group in gdf:
         row = create_assignment_row(group)

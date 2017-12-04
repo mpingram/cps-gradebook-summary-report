@@ -1,5 +1,5 @@
 from enums import LetterGradeCutoffs, Cols, GradeCodes
-import gbutils
+from gbutils import calculate_negative_impact
 from gradeconvert import to_letter_grade
 import pandas as pd
 import numpy as np
@@ -16,7 +16,7 @@ def render_grade_breakdown_diagrams(grade_df):
     IMAGE_DIR = "./images/"
     # group filtered df by subject
     gdf = grade_df.groupby("SubjectName")
-    teacher_fullname = grade_df.iloc[0]["TeacherFullname"]
+    teacher_fullname = grade_df.iloc[1]["TeacherFullname"]
     # create images
     diagram_urls = []
     for subject_name, group in gdf:
@@ -75,14 +75,14 @@ def render_unused_categories_df(unused_cats_df):
 
 def render_negative_impact_assignments(assignments_df):
     """df -> html"""
-    NUM_ASSIGNMENTS_TO_DISPLAY = 5
+    NUM_ASSIGNMENTS_TO_DISPLAY = 3
     # drop all assignments with None, Excused, Incomplete or "" grades.
     assignments_df = assignments_df[~assignments_df["Score"].isin(("", None, GradeCodes.Excused, GradeCodes.Incomplete))]
     # group assignments by subject name
     assignments_df_by_subject = assignments_df.groupby("SubjectName", as_index=False)
     # go through assignments and calculate negative impact scores, adding new column for them
     def create_negative_impact_column(df):
-        df["Negative Impact"] = df.apply(lambda row: gbutils.calculate_negative_impact(
+        df["Negative Impact"] = df.apply(lambda row: calculate_negative_impact(
                                                         row[Cols.Score.value], 
                                                         row[Cols.ScorePossible.value], 
                                                         row[Cols.CategoryWeight.value],
@@ -109,13 +109,13 @@ def render_negative_impact_assignments(assignments_df):
             "Score": "mean",
             "Negative Impact": "mean"
             })
+        # keep only the top 5 highest impact assignments
+        df.sort_values(["Negative Impact"], ascending=False, inplace=True)
+        df = df.head(5)
         return df
 
     assignments_df = assignments_df_by_subject.apply(create_negative_impact_column)
     assignments_df.reset_index(inplace=True, drop=True)
-    # keep only the top 5 highest impact assignments
-    assignments_df = assignments_df.sort_values(["Negative Impact"], ascending=False)
-    assignments_df = assignments_df.head(5)
     # rename Score -> AvgScore
     assignments_df["AvgScore"] = assignments_df["Score"]
     # set index to SubjectName
@@ -144,33 +144,34 @@ def render_category_table(assignments_df, unused_cats_df):
             "NumMissing",
             "NumZero",
         ]]
-    for _, row in unused_cats_df.iterrows():
-        assignments_df = assignments_df.append(pd.DataFrame({
-                    "SubjectName": row["SubjectName"],
-                    "CategoryName": row["CategoryName"],
-                    "CategoryWeight": row["CategoryWeight"],
-                    "Score": np.nan,
-                    "NumAssignments": np.nan,
-                    "NumBlank": np.nan,
-                    "NumExcused": np.nan,
-                    "NumIncomplete": np.nan,
-                    "NumMissing": np.nan,
-                    "NumZero": np.nan
-                }, index=[0]), ignore_index=True)
-        
     assignments_df["Score"] = assignments_df["Score"].astype(float)
     assignments_pivot = assignments_df.pivot_table(index=["SubjectName"], 
                                                    columns=["CategoryName"],
                                                    aggfunc={
                                                         "CategoryWeight": 'first',
                                                         "Score": np.mean,
-                                                        "NumAssignments": 'count',
+                                                        "NumAssignments": lambda row: row.size,
                                                         "NumBlank": np.sum,
                                                         "NumExcused": np.sum,
                                                         "NumIncomplete": np.sum,
                                                         "NumMissing": np.sum,
                                                         "NumZero": np.sum,
-                                                    }).stack()
+                                                   }).stack()
+    # append unused categories to the end; because categories are unused (ie have no assignments),
+    # they don't show up in the assignments_df
+    for _, row in unused_cats_df.iterrows():
+        assignments_pivot = assignments_pivot.append(pd.DataFrame({
+                    "SubjectName": row["SubjectName"],
+                    "CategoryName": row["CategoryName"],
+                    "CategoryWeight": row["CategoryWeight"],
+                    "Score": np.nan,
+                    "NumAssignments": 0,
+                    "NumBlank": 0,
+                    "NumExcused": 0,
+                    "NumIncomplete": 0,
+                    "NumMissing": 0,
+                    "NumZero": 0
+                }, index=[0]), ignore_index=True)
     assignments_pivot = assignments_pivot.round(decimals=1)
     assignments_pivot = assignments_pivot.fillna("n/a")
     assignments_pivot["AvgScore"] = assignments_pivot["Score"]
@@ -255,7 +256,7 @@ def create_gradebook_summary(teacher_fullname, homeroom):
     assignments_df = assignments_df[assignments_df["Homeroom"] == homeroom]
 
     # if dfs are empty, skip
-    if grade_df.empty and unused_cats_df.empty and assignments_df.empty:
+    if grade_df.empty or assignments_df.empty:
         return False
     
     template_vars = {}

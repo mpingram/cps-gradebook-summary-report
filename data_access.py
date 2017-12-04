@@ -77,14 +77,17 @@ def get_assignments_df():
 
     ASSIGNMENT_DATA_FILEPATH = "./source/CPSAllAssignmentsandGradesExtract(SlowLoad).csv"
     df = pd.read_csv(ASSIGNMENT_DATA_FILEPATH)
+
     # fill NaN's with empty string
     df.fillna("", inplace=True)
     # add column with teacher full name
     df["TeacherFullname"] = df.apply(lambda row:
         "{} {}".format(row.loc["TeacherFirst"], row.loc["TeacherLast"]), axis=1)
+    
     # aggregate data on assignment level, folding individual student
     # assignments into averaged student assignments
     df = gbutils.aggregate_assignments(df)
+
     # add column with subject name
     df["SubjectName"] = df.apply(lambda row:
             get_subject_from_class_name(row["ClassName"]), axis=1)

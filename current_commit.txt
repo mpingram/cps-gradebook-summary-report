@@ -1,7 +1,7 @@
-Update report template
+Group negative impact assignments by subject
 
-* shrink pie chart size
-* remove unused categories table
-* remove missing/zero table
+* display top 3 negative impact assigns by subject
+  as opposed to top 5 negative impact assignments out of
+  all assignments
 
 
