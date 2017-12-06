@@ -104,8 +104,13 @@ def aggregate_assignments(grade_df_subset):
 
         return assignment_row
 
+    # group assignments by AssignmentName, ClassName, and AssignedDate
+    # to obtain individual assignments, even in cases where multiple
+    # assignments in same class have same name (!)
     gdf = grade_df_subset.groupby([Cols.AssignmentName.value, 
-                                   Cols.ClassName.value])
+                                   Cols.ClassName.value,
+                                   Cols.AssignedDate.value])
+
     aggregated_df = pd.DataFrame()
     for name, group in gdf:
         row = create_assignment_row(group)
