@@ -1,4 +1,6 @@
+import matplotlib
 import matplotlib.pyplot as plt
+matplotlib.rcParams.update({'font.size': 22})
 import numpy as np
 from gradeconvert import to_letter_grade
 
@@ -60,11 +62,12 @@ def create_lettergrade_breakdown_diagram(**kwargs):
                 return '{v:d}'.format(v=val)
             return my_autopct
         fig1, ax1 = plt.subplots()
-        bar_width = 1.2
-        chart = ax1.bar(np.arange(len(grade_counts)), grade_counts, bar_width, color=colors, tick_label=labels)
+        #fig1.set_size_inches(0.75, 0.5)
+        #bar_width = 1.2
+        chart = ax1.bar(np.arange(len(grade_counts)), grade_counts, color=colors, tick_label=labels)
         if diagram_label is not None:
             plt.title(diagram_label)
-        ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+        #ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
         try:
             plt.savefig(output_url)
             return (True, None)
