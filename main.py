@@ -1,3 +1,6 @@
+import matplotlib
+matplotlib.use('Agg')
+
 from create_gradebook_summary import create_gradebook_summary
 
 if __name__ == "__main__":

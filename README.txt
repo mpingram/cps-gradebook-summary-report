@@ -38,8 +38,6 @@
   ** python=3.6
 
 * Dependencies:
-  ** jupyter
-  ** pandas
-  ** numpy
-  ** jinja2
-  ** weasyprint
+  ** cario (Needs to be installed on system, rather than through pip -- see www.cairographics.org/download. On ubuntu, $ sudo apt-get install libcairo2)
+  ** pango=1.0 (Same as above. On ubuntu, $ sudo apt-get install libpango1.0-0
+  ** see requirements.txt for remainder
