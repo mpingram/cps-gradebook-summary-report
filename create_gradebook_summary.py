@@ -144,6 +144,8 @@ def render_category_table(assignments_df, unused_cats_df):
             "NumMissing",
             "NumZero",
         ]]
+
+    #print(assignments_df)
     assignments_df["Score"] = assignments_df["Score"].astype(float)
     assignments_pivot = assignments_df.pivot_table(index=["SubjectName"], 
                                                    columns=["CategoryName"],
@@ -160,7 +162,7 @@ def render_category_table(assignments_df, unused_cats_df):
     # append unused categories to the end; because categories are unused (ie have no assignments),
     # they don't show up in the assignments_df
     for _, row in unused_cats_df.iterrows():
-        assignments_pivot = assignments_pivot.append(pd.DataFrame({
+        new_assignments_row = pd.DataFrame({
                     "SubjectName": row["SubjectName"],
                     "CategoryName": row["CategoryName"],
                     "CategoryWeight": row["CategoryWeight"],
@@ -171,7 +173,15 @@ def render_category_table(assignments_df, unused_cats_df):
                     "NumIncomplete": 0,
                     "NumMissing": 0,
                     "NumZero": 0
-                }, index=[0]), ignore_index=True)
+                }, index=["temp_value"])
+        new_assignments_row.set_index(["SubjectName", "CategoryName"], inplace=True)
+        # Only append new_assignments_row to dataframe if a category with the same
+        # name isn't already there.
+        # (sometimes, an unused category with the same name as a used category shows up
+        #    in that case, obviously it's not in fact an unused category and it should be ignored)
+        if not (row["SubjectName"], row["CategoryName"]) in assignments_pivot.index:
+            assignments_pivot = assignments_pivot.append(new_assignments_row)
+
     assignments_pivot = assignments_pivot.round(decimals=1)
     assignments_pivot = assignments_pivot.fillna("n/a")
     assignments_pivot["AvgScore"] = assignments_pivot["Score"]
@@ -182,7 +192,10 @@ def render_category_table(assignments_df, unused_cats_df):
             "NumMissing",
             "NumZero"
         ]]
-    assignments_pivot.style.set_properties(**{'font-size':'6pt'})
+    try:
+        assignments_pivot.style.set_properties(**{'font-size':'6pt'})
+    except ValueError as e:
+        print(assignments_pivot)
     # color NumAssignments red if there are no assignments
     def highlight_rows_with_no_assignments(row):
         return ["background-color: #ff6347;" if (row["NumAssignments"] == 0) else "" for elem in row]
