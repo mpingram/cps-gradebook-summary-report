@@ -91,7 +91,6 @@ def render_negative_impact_assignments(assignments_df):
                                                             (assignments_df["ClassName"] == row["ClassName"])
                                                         ].index),
                                                     ), axis=1)
-        #df["Negative Impact"] = df["Negative Impact"].fillna(value=np.nan)
         df["Negative Impact"] = df["Negative Impact"].astype(float)
         df["Score"] = df["Score"].astype(float)
         # get total number of assignments in this category
@@ -101,25 +100,32 @@ def render_negative_impact_assignments(assignments_df):
                                           ].index), axis=1)
         # keep only the top 5 highest impact assignments
         df.sort_values(["Negative Impact"], ascending=False, inplace=True)
-        df = df.head(5)
+        df = df.head(NUM_ASSIGNMENTS_TO_DISPLAY)
         return df
 
-    assignments_df = assignments_df_by_subject.apply(create_negative_impact_column)
-    assignments_df.reset_index(inplace=True, drop=True)
-    # rename Score -> AvgScore
-    assignments_df["AvgScore"] = assignments_df["Score"]
+    output_df = pd.DataFrame()
+    for name, group in assignments_df_by_subject:
+        df_to_append = create_negative_impact_column(group)
+        output_df = output_df.append(df_to_append, ignore_index=True)
+    #assignments_df = assignments_df_by_subject.apply(create_negative_impact_column)
+    output_df.reset_index(inplace=True, drop=True)
+    # rename cols 
+    output_df["Avg Score"] = output_df["Score"]
+    output_df["Assignment"] = output_df["ASGName"]
+    output_df["Category Name"] = output_df["CategoryName"]
+    output_df["Category Weight"] = output_df["CategoryWeight"]
     # set index to SubjectName
-    assignments_df.set_index("SubjectName", inplace=True)
+    output_df.set_index("SubjectName", inplace=True)
     # keep only the columns we want
-    assignments_df = assignments_df[[
-        "CategoryName",
-        "CategoryWeight",
+    output_df = output_df[[
+        "Category Name",
+        "Category Weight",
         "Total # Assignments in Category",
-        "ASGName",
+        "Assignment",
         "Negative Impact",
-        "AvgScore",
+        "Avg Score",
     ]]
-    return assignments_df.to_html()
+    return output_df.to_html()
 
 def render_category_table(assignments_df, unused_cats_df):
     # filter the cols we want to keep
