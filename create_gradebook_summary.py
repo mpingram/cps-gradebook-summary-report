@@ -273,7 +273,7 @@ def create_gradebook_summary(teacher_fullname, homeroom):
     template_vars["category_table"] = render_category_table(assignments_df, unused_cats_df)
     template_vars["most_recent_grade_date"] = get_most_recent_assignment_entered_date()
 
-    template_vars["report_name"] = "Gradebook Report - {} - {}".format(homeroom, teacher_fullname)
+    template_vars["report_name"] = "Gradebook Report - {} - {}".format(teacher_fullname, homeroom)
 
     render_template(template_vars)
     return True
