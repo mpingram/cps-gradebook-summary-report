@@ -89,26 +89,16 @@ def render_negative_impact_assignments(assignments_df):
                                                         len(assignments_df[ 
                                                             (assignments_df["CategoryName"] == row["CategoryName"]) &
                                                             (assignments_df["ClassName"] == row["ClassName"])
-                                                        ]),
+                                                        ].index),
                                                     ), axis=1)
         #df["Negative Impact"] = df["Negative Impact"].fillna(value=np.nan)
         df["Negative Impact"] = df["Negative Impact"].astype(float)
         df["Score"] = df["Score"].astype(float)
-        df = df[[
-            "SubjectName",
-            "ASGName",
-            "CategoryName",
-            "CategoryWeight",
-            "Score",
-            "Negative Impact"
-            ]]
-        df = df.groupby("ASGName", as_index=False).agg({
-            "SubjectName": "first",
-            "CategoryName": "first",
-            "CategoryWeight": "first",
-            "Score": "mean",
-            "Negative Impact": "mean"
-            })
+        # get total number of assignments in this category
+        df["Total # Assignments in Category"] = df.apply(lambda row: len(assignments_df[ 
+                                                (assignments_df["CategoryName"] == row["CategoryName"]) &
+                                                (assignments_df["ClassName"] == row["ClassName"])
+                                          ].index), axis=1)
         # keep only the top 5 highest impact assignments
         df.sort_values(["Negative Impact"], ascending=False, inplace=True)
         df = df.head(5)
@@ -122,11 +112,12 @@ def render_negative_impact_assignments(assignments_df):
     assignments_df.set_index("SubjectName", inplace=True)
     # keep only the columns we want
     assignments_df = assignments_df[[
-        "ASGName",
         "CategoryName",
         "CategoryWeight",
+        "Total # Assignments in Category",
+        "ASGName",
+        "Negative Impact",
         "AvgScore",
-        "Negative Impact"
     ]]
     return assignments_df.to_html()
 
