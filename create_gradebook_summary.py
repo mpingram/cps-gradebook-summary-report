@@ -75,7 +75,7 @@ def render_unused_categories_df(unused_cats_df):
 
 def render_negative_impact_assignments(assignments_df):
     """df -> html"""
-    NUM_ASSIGNMENTS_TO_DISPLAY = 3
+    NUM_ASSIGNMENTS_TO_DISPLAY = 5
     # drop all assignments with None, Excused, Incomplete or "" grades.
     assignments_df = assignments_df[~assignments_df["Score"].isin(("", None, GradeCodes.Excused, GradeCodes.Incomplete))]
     # group assignments by subject name
