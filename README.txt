@@ -1,5 +1,5 @@
 * Purpose:
-  **Present assignment data from CPS gradebook grouped by teacher, in order to 
+  ** Present assignment data from CPS gradebook grouped by teacher, in order to 
   identify issues in teachers' gradebook records. Issues include: 
     *** large numbers of missing or excused grades
     *** unimportant assignments with inordinately large downward impact

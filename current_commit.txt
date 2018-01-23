@@ -1,7 +1,30 @@
-Group negative impact assignments by subject
+Fix bug in negative assignments table
 
-* display top 3 negative impact assigns by subject
-  as opposed to top 5 negative impact assignments out of
-  all assignments
-
+* For some reason, instead of showing every class, table showed one
+  class repeated 5 times
+* it's NOT because I forgot to include axis=1 in final call to apply
+  ** gah, is this my fault or is it pandas? Sure, both. But I think pandas
+    is full of gotchas that aren't obvious. It's been difficult for me to
+    make progress here, and I keep making these kinds of mistakes.
+  ** case in point: I'm making a grouped_df.apply(fn, axis=1) call. The
+    axis argument gets passed to fn(!?) and not to .apply(). Something like
+    this happens. every. time. I try to manipulate data with pandas. 
+    *** the reason for this: GroupByObject.apply(fn) does not take axis kwarg,
+      or any kwargs. It passes args and kwargs to fn ... ok, pandas.
+      So GroupByObject.apply(), DataFrame.apply(), and Series.apply() all
+      behave differently with keyword arguments? W- Why? Am I crazy or is
+      this awfully designed?
+    *** I want to do the simplest thing -- I want to *apply a function to each
+      element of a group, and append the returned value of that function to a 
+      dataframe*. I have spent *two hours* of my life on this problem after 
+      using pandas *for the past five months*. This can't be just me. Ooh, I'm
+      pissed
+    *** <deep breathing exercises> df.append() does not operate in place. Unlike
+      other pandas methods, which have keyword arguments like inplace=boolean
+      (or, inconsistently, copy=boolean - deep breaths), append has no such argument.
+      With that in mind, one might possibly assume that append works THE SAME WAY
+      THAT THE METHOD LIST.APPEND, FROM ***PYTHON***, WORKS, deep breath, which is
+      to say, that df.append() would operate on a df in place. It does not.
+      df.append() returns a new df, and there is nothing to be done about it. I'm
+      going home now.
 
