@@ -5,6 +5,8 @@ import gbutils
 import os.path as path
 import re
 
+DATE = "2018-05-14"
+
 CACHED_GRADE_DF = None
 CACHED_ASSIGNMENTS_DF = None
 CACHED_CATEGORIES_DF = None
@@ -45,7 +47,7 @@ def get_grade_df():
     if CACHED_GRADE_DF is not None:
         return CACHED_GRADE_DF
 
-    GRADE_DATA_FILEPATH = "./source/ESCumulativeGradesExtract.csv"
+    GRADE_DATA_FILEPATH = "./source/{}/ESCumulativeGradesExtract.csv".format(DATE)
     df = pd.read_csv(GRADE_DATA_FILEPATH)
     # fill NaN's with empty string
     df.fillna("", inplace=True)
@@ -75,7 +77,7 @@ def get_assignments_df():
     if CACHED_ASSIGNMENTS_DF is not None:
         return CACHED_ASSIGNMENTS_DF
 
-    ASSIGNMENT_DATA_FILEPATH = "./source/CPSAllAssignmentsandGradesExtract(SlowLoad).csv"
+    ASSIGNMENT_DATA_FILEPATH = "./source/{}/CPSAllAssignmentsandGradesExtract(SlowLoad).csv".format(DATE)
     df = pd.read_csv(ASSIGNMENT_DATA_FILEPATH)
 
     # fill NaN's with empty string
@@ -110,7 +112,7 @@ def get_categories_df():
     if CACHED_CATEGORIES_DF is not None:
         return CACHED_CATEGORIES_DF
 
-    CATEGORY_DATA_FILEPATH = "./source/CPSTeacherCategoriesandTotalPointsLogic.csv"
+    CATEGORY_DATA_FILEPATH = "./source/{}/CPSTeacherCategoriesandTotalPointsLogic.csv".format(DATE)
     df = pd.read_csv(CATEGORY_DATA_FILEPATH)
     # fill NaN's with empty string
     df.fillna("", inplace=True)
@@ -141,7 +143,7 @@ def get_unused_cats_df():
     if CACHED_UNUSED_CATEGORIES_DF is not None:
         return CACHED_UNUSED_CATEGORIES_DF
 
-    UNUSED_CATS_FILEPATH = "./source/CPSUnusedCategoriesinTeacherGradebooks.csv"
+    UNUSED_CATS_FILEPATH = "./source/{}/CPSUnusedCategoriesinTeacherGradebooks.csv".format(DATE)
     source_df = pd.read_csv(UNUSED_CATS_FILEPATH)
     # keep only the columns we care about
     df = pd.DataFrame()
